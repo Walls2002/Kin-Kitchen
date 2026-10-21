@@ -1,0 +1,327 @@
+@import "tailwindcss";
+
+/* Kin Kitchen: a merienda tray. Buko white, latik ink, pandan shell, ube actions, yema for running low. */
+
+:root {
+  color-scheme: light;
+  /* buko white ground, white label surfaces, latik-brown ink */
+  --ground: oklch(0.975 0.006 85);
+  --surface: oklch(1 0 0);
+  --surface-2: oklch(0.972 0.008 80);
+  --ink: oklch(0.29 0.035 50);
+  --ink-2: oklch(0.47 0.035 50);
+  --ink-3: oklch(0.56 0.03 55);
+  --line: oklch(0.925 0.012 75);
+  --line-strong: oklch(0.84 0.018 70);
+  /* the shell is pale pandan leaf: light, with pandan-dark ink */
+  --shell: oklch(0.95 0.03 128);
+  --shell-2: oklch(0.915 0.045 128);
+  --shell-3: oklch(0.875 0.06 128);
+  --shell-ink: oklch(0.3 0.05 135);
+  --shell-ink-2: oklch(0.45 0.05 135);
+  /* actions: ube */
+  --accent: oklch(0.45 0.13 300);
+  --accent-hover: oklch(0.39 0.13 300);
+  --accent-ink: oklch(0.99 0.005 300);
+  --accent-wash: oklch(0.95 0.03 305);
+  --focus: oklch(0.55 0.17 300);
+  /* state: rise (strawberry-red), drop (pandan green), low (yema gold, reserved) */
+  --rise: oklch(0.54 0.18 28);
+  --rise-wash: oklch(0.96 0.025 28);
+  --rise-on-shell: oklch(0.5 0.18 28);
+  --drop: oklch(0.5 0.12 145);
+  --drop-wash: oklch(0.96 0.035 145);
+  --low: oklch(0.82 0.14 85);
+  --low-ink: oklch(0.5 0.1 75);
+  --low-wash: oklch(0.97 0.05 90);
+  --low-on: oklch(0.3 0.06 70);
+  /* a running-low row in the Inventory sheet: the whole row warms, the stock cell most */
+  --low-row: oklch(0.95 0.06 80);
+  --low-row-strong: oklch(0.9 0.1 78);
+  /* canister gauge: glass jar, pandan fill, latik lid */
+  --jar-glass: oklch(0.97 0.008 85);
+  --jar-rim: oklch(0.78 0.025 70);
+  --jar-fill: oklch(0.68 0.12 135);
+  --jar-lid: oklch(0.42 0.05 50);
+  --shelf: oklch(0.42 0.05 50);
+  /* chart series: pandan, ube, calamansi, blueberry, strawberry (validated, light surface) */
+  --series-1: #3e8a50;
+  --series-2: #6b4699;
+  --series-3: #c2701c;
+  --series-4: #3d7fb8;
+  --series-5: #cc4b6c;
+  --chart-bar: oklch(0.47 0.12 300);
+  --chart-grid: oklch(0.93 0.01 75);
+  --scrim: oklch(0.3 0.04 50 / 0.35);
+  --shadow-sheet: 0 18px 44px -14px oklch(0.35 0.05 50 / 0.28), 0 2px 6px oklch(0.35 0.05 50 / 0.1);
+  --shadow-lift: 0 6px 18px -8px oklch(0.35 0.05 50 / 0.22);
+}
+
+@theme inline {
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-shell: var(--shell);
+  --color-shell-2: var(--shell-2);
+  --color-shell-3: var(--shell-3);
+  --color-shell-ink: var(--shell-ink);
+  --color-shell-ink-2: var(--shell-ink-2);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-wash: var(--accent-wash);
+  --color-focus: var(--focus);
+  --color-rise: var(--rise);
+  --color-rise-wash: var(--rise-wash);
+  --color-rise-on-shell: var(--rise-on-shell);
+  --color-drop: var(--drop);
+  --color-drop-wash: var(--drop-wash);
+  --color-low: var(--low);
+  --color-low-ink: var(--low-ink);
+  --color-low-wash: var(--low-wash);
+  --color-low-on: var(--low-on);
+  --color-low-row: var(--low-row);
+  --color-low-row-strong: var(--low-row-strong);
+  --color-jar-fill: var(--jar-fill);
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bricolage), var(--font-geist), ui-sans-serif, sans-serif;
+  --radius-surface: 10px;
+  /* fixed product scale, ratio ~1.2 */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.05rem;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.15rem;
+  --text-base: 0.9375rem;
+  --text-base--line-height: 1.4rem;
+  --text-md: 1.0625rem;
+  --text-md--line-height: 1.5rem;
+  --text-lg: 1.3125rem;
+  --text-lg--line-height: 1.7rem;
+  --text-xl: 1.75rem;
+  --text-xl--line-height: 2.1rem;
+  --text-2xl: 2.125rem;
+  --text-2xl--line-height: 2.4rem;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    text-wrap: balance;
+    letter-spacing: -0.015em;
+  }
+  ::selection {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  input,
+  select,
+  textarea {
+    caret-color: var(--focus);
+    font-size: 16px; /* keeps iOS from zooming */
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--ink-3);
+  }
+  a {
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--line-strong);
+    border-radius: 10px;
+    border: 3px solid var(--ground);
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+/* Solid hairline separators. Utilities so responsive variants apply. */
+@utility sep-b {
+  box-shadow: inset 0 -1px 0 var(--line);
+}
+@utility sep-t {
+  box-shadow: inset 0 1px 0 var(--line);
+}
+@utility sep-r {
+  box-shadow: inset -1px 0 0 var(--line);
+}
+@utility sep-rb {
+  box-shadow: inset -1px 0 0 var(--line), inset 0 -1px 0 var(--line);
+}
+@utility sep-none {
+  box-shadow: none;
+}
+
+@layer components {
+  /* Figures sit on tabular numerals so prices align down a column. */
+  .figures {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  /* A label card: white surface, hairline edge, no resting shadow. */
+  .surface {
+    background: var(--surface);
+    border-radius: var(--radius-surface);
+    box-shadow: 0 0 0 1px var(--line);
+  }
+
+  /* The shelf a category's canisters sit on. */
+  .shelf-line {
+    box-shadow: inset 0 -3px 0 var(--shelf);
+  }
+
+  .sheet-in {
+    animation: sheet-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .toast-in {
+    animation: toast-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .label-in {
+    animation: label-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .skeleton {
+    background: linear-gradient(90deg, var(--surface-2), var(--line), var(--surface-2));
+    background-size: 300% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+    border-radius: 6px;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+@keyframes label-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+    background: var(--accent-wash);
+  }
+}
+/*
+ * The Ingredients sheet copies Google Sheets on purpose (owner request): grey
+ * header bands, column letters and row numbers, freeze bars, and the blue
+ * selection. These colours are scoped to the sheet and used nowhere else.
+ */
+.gsheet {
+  --gs-grid: #e2e3e3;
+  --gs-grid-strong: #c4c7c5;
+  --gs-head: #f8f9fa;
+  --gs-head-ink: #5f6368;
+  --gs-head-on: #d3e3fd;
+  --gs-head-on-ink: #0b57d0;
+  --gs-sel: #1a73e8;
+  --gs-freeze: #dadce0;
+}
+
+/* Navigation answers a tap at once: the pressed item tints, then an ube bar runs. */
+.nav-press {
+  background: color-mix(in oklch, var(--shell-ink) 16%, transparent);
+  animation: nav-fade-in 120ms ease-out 80ms both;
+}
+.nav-progress {
+  background: var(--focus);
+  box-shadow: 0 0 8px var(--focus);
+  animation:
+    nav-fade-in 150ms ease-out 120ms both,
+    nav-run 2.4s cubic-bezier(0.16, 1, 0.3, 1) 120ms both;
+}
+@keyframes nav-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes nav-run {
+  from {
+    transform: scaleX(0.05);
+  }
+  to {
+    transform: scaleX(0.85);
+  }
+}
+@keyframes shimmer {
+  to {
+    background-position: -150% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet-in,
+  .toast-in,
+  .label-in,
+  .skeleton {
+    animation: none;
+  }
+  .nav-progress {
+    animation: nav-fade-in 150ms ease-out 120ms both;
+    transform: scaleX(0.6);
+  }
+  .jar-fill {
+    transition: none !important;
+  }
+}
+
+dialog::backdrop {
+  background: var(--scrim);
+}
+
+/* Phones: an open sheet holds the page still behind it. */
+html:has(dialog[open]) {
+  overflow: hidden;
+}
+
+/*
+ * Phones: a small type utility on a form control (text-base is 15px) would let
+ * iOS zoom on focus. Unlayered, so it wins over the utilities layer.
+ */
+@media (width < 64rem) {
+  /* Toasts rise above the floating Add button instead of covering it. */
+  [data-fab] ~ [data-toasts] {
+    bottom: calc(env(safe-area-inset-bottom) + 9.5rem);
+  }
+  :is(input, select, textarea):is(.text-base, .text-sm, .text-xs, .text-2xs, [class*="text-[1"]) {
+    font-size: 16px;
+  }
+}
