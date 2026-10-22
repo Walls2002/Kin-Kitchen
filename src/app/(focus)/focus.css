@@ -26,7 +26,7 @@ body:has(.focus-shell) {
   }
 }
 
-/* The alarm flashes between ube and the white label, so it reads across a room. */
+/* The alarm flashes between cocoa and the white label, so it reads across a room. */
 .focus-shell {
   --bake-flash-bg: var(--surface);
   --bake-flash-ink: var(--ink);
@@ -77,7 +77,7 @@ body:has(.focus-shell) {
   .bake-ring {
     animation: none;
   }
-  /* No flashing: a steady white banner with a heavy ube edge. */
+  /* No flashing: a steady white banner with a heavy cocoa edge. */
   .bake-alarm {
     animation: none;
     background: var(--bake-flash-bg);

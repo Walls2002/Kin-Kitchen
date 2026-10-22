@@ -41,7 +41,7 @@ const TABLE_NUMERIC: Record<string, string[]> = {
 const LIST_COLUMNS: Record<string, string[]> = {
   recipes: ["lines", "steps"],
   orders: ["items", "payments"],
-  sketches: ["strokes"],
+  sketches: ["strokes", "extra_views"],
 };
 
 const DUPLICATE: Record<string, string> = {

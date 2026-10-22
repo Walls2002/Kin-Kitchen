@@ -214,81 +214,81 @@
       },
       "accent": {
         "role": "primary",
-        "displayName": "Ube Action",
-        "canonical": "oklch(0.45 0.13 300)",
+        "displayName": "Cocoa Action",
+        "canonical": "oklch(0.37 0.05 52)",
         "tonalRamp": [
-          "oklch(0.15 0.065 300)",
-          "oklch(0.27 0.130 300)",
-          "oklch(0.39 0.130 300)",
-          "oklch(0.51 0.130 300)",
-          "oklch(0.63 0.130 300)",
-          "oklch(0.75 0.130 300)",
-          "oklch(0.87 0.130 300)",
-          "oklch(0.95 0.065 300)"
+          "oklch(0.15 0.025 52)",
+          "oklch(0.27 0.050 52)",
+          "oklch(0.39 0.050 52)",
+          "oklch(0.51 0.050 52)",
+          "oklch(0.63 0.050 52)",
+          "oklch(0.75 0.050 52)",
+          "oklch(0.87 0.050 52)",
+          "oklch(0.95 0.025 52)"
         ],
-        "purpose": "Primary buttons, Next, floating add, selection, selected nav icon."
+        "purpose": "Primary buttons, Next, floating add, selection, selected nav icon, the logo."
       },
       "accent-hover": {
         "role": "primary",
-        "displayName": "Ube Action Hover",
-        "canonical": "oklch(0.39 0.13 300)",
+        "displayName": "Cocoa Action Hover",
+        "canonical": "oklch(0.31 0.05 52)",
         "tonalRamp": [
-          "oklch(0.15 0.065 300)",
-          "oklch(0.27 0.130 300)",
-          "oklch(0.39 0.130 300)",
-          "oklch(0.51 0.130 300)",
-          "oklch(0.63 0.130 300)",
-          "oklch(0.75 0.130 300)",
-          "oklch(0.87 0.130 300)",
-          "oklch(0.95 0.065 300)"
+          "oklch(0.15 0.025 52)",
+          "oklch(0.27 0.050 52)",
+          "oklch(0.39 0.050 52)",
+          "oklch(0.51 0.050 52)",
+          "oklch(0.63 0.050 52)",
+          "oklch(0.75 0.050 52)",
+          "oklch(0.87 0.050 52)",
+          "oklch(0.95 0.025 52)"
         ],
         "purpose": "Primary hover."
       },
       "accent-ink": {
         "role": "primary",
-        "displayName": "Ink on Ube",
-        "canonical": "oklch(0.99 0.005 300)",
+        "displayName": "Ink on Cocoa",
+        "canonical": "oklch(0.98 0.012 85)",
         "tonalRamp": [
-          "oklch(0.15 0.003 300)",
-          "oklch(0.27 0.005 300)",
-          "oklch(0.39 0.005 300)",
-          "oklch(0.51 0.005 300)",
-          "oklch(0.63 0.005 300)",
-          "oklch(0.75 0.005 300)",
-          "oklch(0.87 0.005 300)",
-          "oklch(0.95 0.003 300)"
+          "oklch(0.15 0.006 85)",
+          "oklch(0.27 0.012 85)",
+          "oklch(0.39 0.012 85)",
+          "oklch(0.51 0.012 85)",
+          "oklch(0.63 0.012 85)",
+          "oklch(0.75 0.012 85)",
+          "oklch(0.87 0.012 85)",
+          "oklch(0.95 0.006 85)"
         ],
-        "purpose": "Text on ube."
+        "purpose": "Text on cocoa."
       },
       "accent-wash": {
         "role": "primary",
-        "displayName": "Ube Wash",
-        "canonical": "oklch(0.95 0.03 305)",
+        "displayName": "Cocoa Wash",
+        "canonical": "oklch(0.94 0.025 60)",
         "tonalRamp": [
-          "oklch(0.15 0.015 305)",
-          "oklch(0.27 0.030 305)",
-          "oklch(0.39 0.030 305)",
-          "oklch(0.51 0.030 305)",
-          "oklch(0.63 0.030 305)",
-          "oklch(0.75 0.030 305)",
-          "oklch(0.87 0.030 305)",
-          "oklch(0.95 0.015 305)"
+          "oklch(0.15 0.013 60)",
+          "oklch(0.27 0.025 60)",
+          "oklch(0.39 0.025 60)",
+          "oklch(0.51 0.025 60)",
+          "oklch(0.63 0.025 60)",
+          "oklch(0.75 0.025 60)",
+          "oklch(0.87 0.025 60)",
+          "oklch(0.95 0.013 60)"
         ],
         "purpose": "Baking status, draft rows, price label band, Bake highlights."
       },
       "focus": {
         "role": "primary",
-        "displayName": "Ube Focus",
-        "canonical": "oklch(0.55 0.17 300)",
+        "displayName": "Cocoa Focus",
+        "canonical": "oklch(0.52 0.1 50)",
         "tonalRamp": [
-          "oklch(0.15 0.085 300)",
-          "oklch(0.27 0.170 300)",
-          "oklch(0.39 0.170 300)",
-          "oklch(0.51 0.170 300)",
-          "oklch(0.63 0.170 300)",
-          "oklch(0.75 0.170 300)",
-          "oklch(0.87 0.170 300)",
-          "oklch(0.95 0.085 300)"
+          "oklch(0.15 0.050 50)",
+          "oklch(0.27 0.100 50)",
+          "oklch(0.39 0.100 50)",
+          "oklch(0.51 0.100 50)",
+          "oklch(0.63 0.100 50)",
+          "oklch(0.75 0.100 50)",
+          "oklch(0.87 0.100 50)",
+          "oklch(0.95 0.050 50)"
         ],
         "purpose": "Focus rings, editor rings, caret, saving dot, nav-pending bar."
       },
@@ -518,8 +518,8 @@
       },
       "series-2": {
         "role": "data",
-        "displayName": "Series 2 Ube",
-        "canonical": "#6b4699",
+        "displayName": "Cocoa Series",
+        "canonical": "#874420",
         "tonalRamp": [
           "oklch(0.15 0.066 302)",
           "oklch(0.27 0.132 302)",
@@ -582,17 +582,17 @@
       },
       "chart-bar": {
         "role": "data",
-        "displayName": "Chart Bar Ube",
-        "canonical": "oklch(0.47 0.12 300)",
+        "displayName": "Cocoa Bar",
+        "canonical": "#874420",
         "tonalRamp": [
-          "oklch(0.15 0.060 300)",
-          "oklch(0.27 0.120 300)",
-          "oklch(0.39 0.120 300)",
-          "oklch(0.51 0.120 300)",
-          "oklch(0.63 0.120 300)",
-          "oklch(0.75 0.120 300)",
-          "oklch(0.87 0.120 300)",
-          "oklch(0.95 0.060 300)"
+          "oklch(0.15 0.055 48)",
+          "oklch(0.27 0.110 48)",
+          "oklch(0.39 0.110 48)",
+          "oklch(0.51 0.110 48)",
+          "oklch(0.63 0.110 48)",
+          "oklch(0.75 0.110 48)",
+          "oklch(0.87 0.110 48)",
+          "oklch(0.95 0.055 48)"
         ],
         "purpose": "Single-series and rank bars."
       },
@@ -658,7 +658,7 @@
           "oklch(0.87 0.007 89)",
           "oklch(0.95 0.003 89)"
         ],
-        "purpose": "Canister mark on the ube app icon (src/app/icon.svg)."
+        "purpose": "Canister mark on the cocoa app icon (src/app/icon.svg)."
       }
     },
     "themeMode": "Always light (color-scheme: light). There is no dark mode.",
@@ -894,7 +894,7 @@
       },
       {
         "name": "bake-flash",
-        "value": "1s steps(1, end) infinite, ube <-> white",
+        "value": "1s steps(1, end) infinite, cocoa <-> white",
         "purpose": "Ringing alarm banner and timer pill."
       },
       {
@@ -920,7 +920,7 @@
       {
         "name": "reduced-motion",
         "value": "none",
-        "purpose": "Entrances, shimmer, step slides and flashing off; the alarm holds white with a 6px ube inner edge; the nav bar holds at 60%."
+        "purpose": "Entrances, shimmer, step slides and flashing off; the alarm holds white with a 6px cocoa inner edge; the nav bar holds at 60%."
       }
     ],
     "breakpoints": [
@@ -941,7 +941,7 @@
       "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Ube solid action; one per view.",
+      "description": "Cocoa solid action; one per view.",
       "html": "<button class=\"ds-btn-primary\">Save stock</button>",
       "css": ".ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;height:44px;padding:0 16px;border:none;border-radius:10px;background:var(--accent);color:var(--accent-ink);font:500 0.9375rem/1 var(--font-geist),ui-sans-serif,system-ui,sans-serif;cursor:pointer;transition:background-color 150ms,transform 150ms}.ds-btn-primary:hover{background:var(--accent-hover)}.ds-btn-primary:active{transform:translateY(1px)}.ds-btn-primary:focus-visible{outline:2px solid var(--focus);outline-offset:2px}"
     },
@@ -957,7 +957,7 @@
       "name": "Text Input",
       "kind": "input",
       "refersTo": "input",
-      "description": "White field, strong hairline, 2px ube focus ring; 16px text to stop iOS zoom.",
+      "description": "White field, strong hairline, 2px cocoa focus ring; 16px text to stop iOS zoom.",
       "html": "<input class=\"ds-input\" placeholder=\"0\" inputmode=\"decimal\">",
       "css": ".ds-input{width:100%;height:44px;padding:0 12px;border:none;border-radius:10px;background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line-strong);font:400 16px/1.4 var(--font-geist),ui-sans-serif,system-ui,sans-serif;caret-color:var(--focus);transition:box-shadow 150ms}.ds-input::placeholder{color:var(--ink-3)}.ds-input:hover{box-shadow:0 0 0 1px var(--ink-3)}.ds-input:focus{outline:none;box-shadow:0 0 0 2px var(--focus)}.ds-input[aria-invalid=true]{box-shadow:0 0 0 2px var(--rise)}"
     },
@@ -965,7 +965,7 @@
       "name": "Pandan Rail",
       "kind": "nav",
       "refersTo": "nav-rail",
-      "description": "Desktop 240px pale pandan rail with a shell-3 hairline edge; the active item is a white label with an ube duotone icon.",
+      "description": "Desktop 240px pale pandan rail with a shell-3 hairline edge; the active item is a white label with an cocoa duotone icon.",
       "html": "<nav class=\"ds-rail\" aria-label=\"Main\"><div class=\"ds-brand\">Kin Kitchen</div><a href=\"#\" class=\"ds-ri\" aria-current=\"page\"><svg width=\"19\" height=\"19\" viewBox=\"0 0 256 256\" aria-hidden=\"true\"><circle cx=\"128\" cy=\"128\" r=\"56\" fill=\"currentColor\" opacity=\"0.2\"/><path fill=\"currentColor\" d=\"M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm72,88a64,64,0,1,1-64-64A64.07,64.07,0,0,1,192,128Zm-16,0a48,48,0,1,0-48,48A48.05,48.05,0,0,0,176,128ZM58.34,69.66A8,8,0,0,0,69.66,58.34l-16-16A8,8,0,0,0,42.34,53.66Zm0,116.68-16,16a8,8,0,0,0,11.32,11.32l16-16a8,8,0,0,0-11.32-11.32ZM192,72a8,8,0,0,0,5.66-2.34l16-16a8,8,0,0,0-11.32-11.32l-16,16A8,8,0,0,0,192,72Zm5.66,114.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32-11.32ZM48,128a8,8,0,0,0-8-8H16a8,8,0,0,0,0,16H40A8,8,0,0,0,48,128Zm80,80a8,8,0,0,0-8,8v24a8,8,0,0,0,16,0V216A8,8,0,0,0,128,208Zm112-88H216a8,8,0,0,0,0,16h24a8,8,0,0,0,0-16Z\"/></svg><span>Today</span></a><a href=\"#\" class=\"ds-ri\"><svg width=\"19\" height=\"19\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M224,128a8,8,0,0,1-8,8H128a8,8,0,0,1,0-16h88A8,8,0,0,1,224,128ZM128,72h88a8,8,0,0,0,0-16H128a8,8,0,0,0,0,16Zm88,112H128a8,8,0,0,0,0,16h88a8,8,0,0,0,0-16ZM82.34,42.34,56,68.69,45.66,58.34A8,8,0,0,0,34.34,69.66l16,16a8,8,0,0,0,11.32,0l32-32A8,8,0,0,0,82.34,42.34Zm0,64L56,132.69,45.66,122.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32,0l32-32a8,8,0,0,0-11.32-11.32Zm0,64L56,196.69,45.66,186.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32,0l32-32a8,8,0,0,0-11.32-11.32Z\"/></svg><span>Tasks</span></a><p class=\"ds-grp\">Sell</p><a href=\"#\" class=\"ds-ri\"><svg width=\"19\" height=\"19\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M224,128a8,8,0,0,1-8,8H128a8,8,0,0,1,0-16h88A8,8,0,0,1,224,128ZM128,72h88a8,8,0,0,0,0-16H128a8,8,0,0,0,0,16Zm88,112H128a8,8,0,0,0,0,16h88a8,8,0,0,0,0-16ZM82.34,42.34,56,68.69,45.66,58.34A8,8,0,0,0,34.34,69.66l16,16a8,8,0,0,0,11.32,0l32-32A8,8,0,0,0,82.34,42.34Zm0,64L56,132.69,45.66,122.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32,0l32-32a8,8,0,0,0-11.32-11.32Zm0,64L56,196.69,45.66,186.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32,0l32-32a8,8,0,0,0-11.32-11.32Z\"/></svg><span>Orders</span></a></nav>",
       "css": ".ds-rail{display:flex;flex-direction:column;gap:2px;width:240px;padding:0 12px 20px;background:var(--shell);color:var(--shell-ink);box-shadow:inset -1px 0 0 var(--shell-3);font-family:var(--font-geist),ui-sans-serif,system-ui,sans-serif}.ds-brand{height:64px;display:flex;align-items:center;padding:0 8px;font-size:1.0625rem;font-weight:600;letter-spacing:-0.015em}.ds-grp{margin:16px 0 0;padding:0 12px 4px;font-size:0.75rem;font-weight:600;color:var(--shell-ink-2)}.ds-ri{display:flex;align-items:center;gap:12px;height:36px;padding:0 12px;border-radius:10px;color:var(--shell-ink-2);font-size:0.9375rem;font-weight:500;text-decoration:none;transition:background-color 150ms,color 150ms}.ds-ri:hover{background:var(--shell-2);color:var(--shell-ink)}.ds-ri[aria-current=page]{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--shell-3)}.ds-ri[aria-current=page] svg{color:var(--accent)}.ds-ri:focus-visible{outline:2px solid var(--focus);outline-offset:2px}"
     },
@@ -981,7 +981,7 @@
       "name": "Order Status and Payment",
       "kind": "chip",
       "refersTo": "status-pill-pending",
-      "description": "Neutral, ube-wash and shell status pills (never yema, rise or drop); a payment mark that stays neutral unless urgent.",
+      "description": "Neutral, cocoa-wash and shell status pills (never yema, rise or drop); a payment mark that stays neutral unless urgent.",
       "html": "<div class=\"ds-row\"><span class=\"ds-st ds-st-todo\">To do</span><span class=\"ds-st ds-st-bake\">Baking</span><span class=\"ds-st ds-st-done\">Done</span><span class=\"ds-st ds-st-x\">Cancelled</span><span class=\"ds-pay\">Balance ₱600.00</span><span class=\"ds-pay ds-pay-urgent\">Unpaid ₱1,200.00</span><span class=\"ds-paid\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z\"/></svg>Paid</span></div>",
       "css": ".ds-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-family:var(--font-geist),ui-sans-serif,system-ui,sans-serif}.ds-st,.ds-pay{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:9999px;font-size:.75rem;font-weight:600;white-space:nowrap}.ds-st-todo{background:var(--surface);color:var(--ink-2);box-shadow:inset 0 0 0 1px var(--line-strong)}.ds-st-bake{background:var(--accent-wash);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line-strong)}.ds-st-done{background:var(--shell);color:var(--shell-ink)}.ds-st-x{background:var(--surface-2);color:var(--ink-3);text-decoration:line-through}.ds-pay{background:var(--surface-2);color:var(--ink-2);box-shadow:inset 0 0 0 1px var(--line);font-variant-numeric:tabular-nums}.ds-pay-urgent{background:var(--rise-wash);color:var(--rise);box-shadow:none}.ds-paid{display:inline-flex;align-items:center;gap:4px;font-size:.75rem;font-weight:500;color:var(--ink-2)}.ds-paid svg{color:var(--drop)}"
     },
@@ -1005,7 +1005,7 @@
       "name": "Bake Step and Timer",
       "kind": "custom",
       "refersTo": "bake-step-card",
-      "description": "Bake mode on the pandan frame: a shell timer pill, the current step on a white label in big Bricolage, and the ube Next.",
+      "description": "Bake mode on the pandan frame: a shell timer pill, the current step on a white label in big Bricolage, and the cocoa Next.",
       "html": "<div class=\"ds-bake\"><div class=\"ds-bake-top\"><span class=\"ds-bake-name\">Ensaymada</span><span class=\"ds-timer\">Proof 42:10</span><span class=\"ds-timer ds-ring\">Bake 0:00</span></div><div class=\"ds-bake-card\"><p class=\"ds-bake-step\">Brush the coiled dough with soft butter and leave to rise until doubled.</p></div><div class=\"ds-bake-bar\"><button class=\"ds-bake-back\">Back</button><button class=\"ds-bake-next\">Next</button></div></div>",
       "css": ".ds-bake{display:flex;flex-direction:column;gap:12px;max-width:420px;padding:12px;border-radius:10px;background:var(--shell);color:var(--shell-ink);font-family:var(--font-geist),ui-sans-serif,system-ui,sans-serif}.ds-bake-top{display:flex;align-items:center;gap:8px}.ds-bake-name{margin-right:auto;font-weight:600}.ds-timer{display:inline-flex;align-items:center;height:44px;padding:0 14px;border-radius:9999px;background:var(--shell-2);box-shadow:inset 0 0 0 1px var(--shell-3);font-weight:600;font-variant-numeric:tabular-nums}.ds-ring{animation:ds-ring 1s steps(1,end) infinite;background:var(--accent);color:var(--accent-ink);box-shadow:none}@keyframes ds-ring{50%{background:var(--surface);color:var(--ink)}}@media (prefers-reduced-motion:reduce){.ds-ring{animation:none;background:var(--surface);color:var(--ink)}}.ds-bake-card{padding:20px;border-radius:10px;background:var(--surface);color:var(--ink)}.ds-bake-step{margin:0;max-width:28ch;font:600 1.6rem/1.22 var(--font-bricolage),var(--font-geist),ui-sans-serif,sans-serif;letter-spacing:-0.015em;text-wrap:balance}.ds-bake-bar{display:flex;gap:8px}.ds-bake-bar button{flex:1;height:56px;border:none;border-radius:10px;font:600 1.3125rem/1 var(--font-geist),ui-sans-serif,system-ui,sans-serif;cursor:pointer}.ds-bake-back{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line-strong)}.ds-bake-next{background:var(--accent);color:var(--accent-ink)}.ds-bake-next:hover{background:var(--accent-hover)}.ds-bake-bar button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}"
     },
@@ -1020,11 +1020,11 @@
   ],
   "narrative": {
     "northStar": "The Merienda Tray",
-    "overview": "Kin Kitchen is a merienda tray set out on the counter: buko-white paper, white label surfaces, latik-brown ink, a pale pandan-leaf shell around the edge, ube for every action, and yema gold kept for one job, running low. It is always light. The owner asked for a bright kitchen app in baking colours that does not look like a generated template, so the kakanin colours (pandan, ube, calamansi, blueberry, strawberry) are carried by data (chart series, category dots, the icing palette) and never by chrome. The chrome is quiet: pale pandan rail and tab bar with a hairline edge, white labels pulled off it for the selected place.\n\nThe structure underneath carried over unchanged from the previous world. Home is **Today** (stat strip, orders due, tasks, running-low canisters, the next tax return). Money lists are ledger sheets; statements are white labels with locked computed lines; a recipe's price label prints cost per unit as its one large figure; an ingredient opens as a labelled canister whose fill is its stock. The Ingredients route, at the owner's request, copies Google Sheets outright (column letters, row numbers, a formula bar, blue selection, category sheet tabs), and that copy keeps its own scoped greys and blue.\n\nTwo full-bleed kitchen surfaces sit inside the same world. **Bake mode** is the recipe card propped against the flour tin: the pandan shell becomes the whole frame, the current step sits on a white label in big Bricolage, every ingredient stays in view, and timers are pills that ring and flash ube. The **cake design board** is the cake-box-lid sketch: a 4:3 board of cake outlines, named icing swatches and 56px tools on the pandan shell. Density elsewhere is operational: one-tap checks on a phone in the kitchen, whole-sheet review on a PC.",
+    "overview": "Kin Kitchen is a merienda tray set out on the counter: buko-white paper, white label surfaces, latik-brown ink, a pale pandan-leaf shell around the edge, cocoa for every action, and yema gold kept for one job, running low. It is always light. The owner asked for a bright kitchen app in baking colours that does not look like a generated template, so the kakanin colours (pandan, cocoa, calamansi, blueberry, strawberry) are carried by data (chart series, category dots, the icing palette) and never by chrome. The chrome is quiet: pale pandan rail and tab bar with a hairline edge, white labels pulled off it for the selected place.\n\nThe structure underneath carried over unchanged from the previous world. Home is **Today** (stat strip, orders due, tasks, running-low canisters, the next tax return). Money lists are ledger sheets; statements are white labels with locked computed lines; a recipe's price label prints cost per unit as its one large figure; an ingredient opens as a labelled canister whose fill is its stock. The Ingredients route, at the owner's request, copies Google Sheets outright (column letters, row numbers, a formula bar, blue selection, category sheet tabs), and that copy keeps its own scoped greys and blue.\n\nTwo full-bleed kitchen surfaces sit inside the same world. **Bake mode** is the recipe card propped against the flour tin: the pandan shell becomes the whole frame, the current step sits on a white label in big Bricolage, every ingredient stays in view, and timers are pills that ring and flash cocoa. The **cake design board** is the cake-box-lid sketch: a 4:3 board of cake outlines, named icing swatches and 56px tools on the pandan shell. Density elsewhere is operational: one-tap checks on a phone in the kitchen, whole-sheet review on a PC.",
     "keyCharacteristics": [
       "Always light: buko-white ground, white label surfaces, latik-brown ink; no dark mode, no dark chrome.",
       "A pale pandan shell (rail, tab bar, toasts, Bake and board frames) with a hairline `shell-3` edge and dark pandan ink.",
-      "Ube is the only action colour (primary buttons, focus, selection, the selected nav icon in duotone).",
+      "Cocoa is the only action colour (primary buttons, focus, selection, the selected nav icon in duotone).",
       "Kakanin colours live in data only: five validated chart series, the fixed category legend, the icing palette.",
       "Yema gold means running low, and nothing else.",
       "Anything the app works out is locked behind a lock icon on a recessed tint, never editable.",
@@ -1040,7 +1040,7 @@
       },
       {
         "name": "The Data Wears The Kakanin Rule",
-        "body": "Pandan, ube, calamansi, blueberry and strawberry appear as data (series, categories, icing), never as decoration. Chrome stays buko, white, latik, pale pandan and the single ube action.",
+        "body": "Pandan, cocoa, calamansi, blueberry and strawberry appear as data (series, categories, icing), never as decoration. Chrome stays buko, white, latik, pale pandan and the single cocoa action.",
         "section": "colors"
       },
       {
@@ -1065,7 +1065,7 @@
       },
       {
         "name": "The Order Status Rule",
-        "body": "Order status uses neutral, ube wash and shell only: To do on white, Baking on `accent-wash`, Done on `shell`, Cancelled on `surface-2` struck through, each with icon and word. Never yema, `rise` or `drop`.",
+        "body": "Order status uses neutral, cocoa wash and shell only: To do on white, Baking on `accent-wash`, Done on `shell`, Cancelled on `surface-2` struck through, each with icon and word. Never yema, `rise` or `drop`.",
         "section": "colors"
       },
       {
@@ -1097,7 +1097,7 @@
     "dos": [
       "**Do** keep the app always light: buko `ground`, white `surface` labels, latik `ink`.",
       "**Do** frame the app in the pale pandan shell (rail, tab bar, toasts, Bake and board frames) separated by a `shell-3` hairline, never by a dark band.",
-      "**Do** use ube `accent` for every action and `focus` for every focus ring.",
+      "**Do** use cocoa `accent` for every action and `focus` for every focus ring.",
       "**Do** import icons only from the Phosphor vocabulary module: regular by default, bold for emphasis, duotone for the selected nav item.",
       "**Do** keep kakanin colours in data: the five series in fixed order, the category legend, the icing palette.",
       "**Do** keep computed values locked behind a lock on a recessed tint, never editable, with a link to their source.",

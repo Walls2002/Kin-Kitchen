@@ -353,11 +353,22 @@ export const CHAPTERS: Chapter[] = [
         title: "Draw a design",
         steps: [
           "Open the order and tap **Draw the cake design** in its Cake design panel. Or start from the gallery with **New design** or **Start a design**.",
-          "Pick a cake shape: Blank board, Round cake from above, Round cake from the side, Two tiers, Sheet cake or Cupcakes.",
+          "Pick a cake shape (round from above or the side, two or three tiers, sheet, square tiers, heart, drip, bento box, a number 0 to 9, cupcakes, or a blank board), or a **Theme cake** (Birthday, Unicorn, Princess, Dinosaur, Floral wedding, Baby shower, Christmas) that starts decorated.",
           "Draw with your finger, a stylus or the mouse. **Pen** [[P]] is a plain line, **Marker** [[M]] is wide and see-through like icing, and **Eraser** [[E]] removes any line you drag across.",
-          "Pick an icing colour (or **More colours**) and a size: **Fine**, **Medium** or **Thick**.",
+          "**Piping** [[I]] lays real piping-tip shapes: drag for a run, tap for one. Each tip shows its Wilton number (1M rosette, 2D drop flower, 104 rose and ruffle, 352 leaf, 233 grass, 48 basket weave and more). **Pipe the border** goes all round the cake.",
+          "**Decor** [[D]] places toppers and words (type your own greeting), number candles, candles, sweets and cartoon figures. Tap to place one; drag a placed one to move it. The Eraser removes it.",
+          "Pick an icing colour (or **More colours**) and a size: **Fine**, **Medium** or **Thick** (Small, Medium or Large for Decor).",
           "**Undo** is [[Ctrl]] + [[Z]] and **Redo** is [[Ctrl]] + [[Shift]] + [[Z]]. **Clear** empties the board, with **Undo** in the message.",
           "Name it at the top, and tap **Notes** for the greeting text, flavours and filling.",
+        ],
+      },
+      {
+        title: "Draw the top and the side",
+        steps: [
+          "Tap **Add a view** at the top left of the board and pick a shape, such as Round cake from the side after drawing the top.",
+          "Each view is its own drawing with its own Undo. Tap a view's tab to switch.",
+          "Changing the shape of a view with drawing on it asks first: **Add as a new view** keeps the drawing, **Replace and clear** starts that view again.",
+          "The order, Bake mode and **Share picture** show every view together.",
         ],
       },
       {
@@ -371,7 +382,7 @@ export const CHAPTERS: Chapter[] = [
     tips: [
       "Designs save as you draw. Look for **Saved** at the top; if it says **Couldn't save · Retry**, tap it.",
       "In Bake mode, a **Design** button shows the order's designs full screen while you decorate.",
-      "Changing the cake shape keeps your lines, and **Undo** puts the old shape back.",
+      "Replaced a view by mistake? Tap **Undo** in the message, or [[Ctrl]] + [[Z]].",
       "The gallery shows **For upcoming orders** or **All designs**. Deleting a design has **Undo**.",
     ],
     go: { href: "/designs", label: "Go to Cake designs" },
@@ -606,7 +617,7 @@ export const CHAPTERS: Chapter[] = [
         title: "Connect Supabase",
         steps: [
           "Create a free project at supabase.com.",
-          "In its SQL editor, run the three files in {{supabase/migrations}} in order: {{0001_init.sql}}, {{0002_business.sql}}, then {{0003_bake_and_designs.sql}}.",
+          "In its SQL editor, run the files in {{supabase/migrations}} in order, {{0001_init.sql}} through {{0006_design_views.sql}}.",
           "Copy {{.env.example}} to {{.env.local}} and fill in {{NEXT_PUBLIC_SUPABASE_URL}}, {{NEXT_PUBLIC_SUPABASE_ANON_KEY}} and {{NEXT_PUBLIC_SITE_URL}}.",
           "In Supabase, under Authentication → URL configuration, add your site's address followed by {{/auth/callback}} to the redirect URLs.",
           "Restart Kin Kitchen. The Sample data strip disappears and you'll see the log-in page.",

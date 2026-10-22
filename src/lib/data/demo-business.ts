@@ -269,7 +269,8 @@ export function seedBusiness(ingredients: Ingredient[], history: PriceEntry[], n
     const progress = monthsFrom(trackFrom, ym).length / 10;
     const count = Math.round((27 + progress * 12) * SEASON[m]);
     const last = ym === thisYm ? addDays(day, 12) : lastDayOf(ym);
-    const span = Number(last.slice(8)) - 1 + (ym === thisYm ? 0 : 0);
+    // This month runs on into next month's first days (what's booked ahead), so count days, not dates.
+    const span = Math.round((Date.parse(`${last}T00:00:00Z`) - Date.parse(`${ym}-01T00:00:00Z`)) / 86_400_000);
     for (let k = 0; k < count; k++) {
       const due = addDays(`${ym}-01`, Math.floor(r() * (span + 1)));
       if (due > last) continue;
@@ -602,6 +603,7 @@ export function seedBusiness(ingredients: Ingredient[], history: PriceEntry[], n
       strokes: idx === 0 ? birthday : drip,
       surface: idx === 0 ? null : "#f9d7e1",
       layers: (idx === 0 ? {} : { top: "#fffdf8" }) as Record<string, string>,
+      extra_views: [],
       notes:
         idx === 0
           ? "Pink shell border, white pearl ring, ube five-petal flowers with leaves on the left. Greeting in white in the clear space on the right."

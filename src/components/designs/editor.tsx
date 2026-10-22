@@ -3,6 +3,8 @@
 import {
   Check,
   ChevronLeft,
+  Confetti,
+  Decor,
   Ellipsis,
   Eraser,
   Expand,
@@ -25,7 +27,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState, type ReactNode } from "react";
 import { deleteSketch, saveSketch } from "@/lib/biz-actions";
-import { PIPING_TIPS, SKETCH_TEMPLATES, SURFACE_COLORS, type PipingTip, type SketchTemplate, type Stroke } from "@/lib/types";
+import { PIPING_TIPS, SURFACE_COLORS, type DecorItem, type PipingTip, type SketchTemplate, type SketchView, type Stroke } from "@/lib/types";
 import { Sheet } from "../sheet";
 import { useToast } from "../toast";
 import { Button, Field, Textarea, cx } from "../ui";
@@ -33,9 +35,11 @@ import { Board, type BoardView, type Tool } from "./board";
 import { CAKE_PARTS, cakeBorders, partLabel } from "./cake-art";
 import { stashDeleted } from "./handoff";
 import { canShareFile, downloadFile, renderPicture, shareFile } from "./picture";
-import { PIPE_SPACING, PIPE_TIP_LABEL, TipSample, layAlong } from "./piping";
-import { TEMPLATE_LABEL, isLight } from "./sketch-art";
+import { DECOR, DECOR_GROUPS, DecorSample, GREETINGS } from "./decor";
+import { PIPE_SPACING, PIPE_TIP_LABEL, PIPE_TIP_NUMBER, TipSample, layAlong } from "./piping";
+import { SHAPE_CHOICES, SketchPreview, TEMPLATE_LABEL, VIEW_LABEL, isLight, isNumberCake } from "./sketch-art";
 import { TemplateArt } from "./template-tile";
+import { THEMES } from "./themes";
 import { VANILLA, frostingTones } from "./tones";
 
 /* ---------- drawing material ---------- */
@@ -61,6 +65,11 @@ const SIZES = [
 type SizeKey = (typeof SIZES)[number]["key"];
 /** Piping shape sizes (overall diameter, board units) for Fine / Medium / Thick. */
 const PIPE_SIZE: Record<SizeKey, number> = { fine: 18, medium: 30, thick: 46 };
+/** Decoration heights (board units) for Small / Medium / Large. */
+const DECOR_SIZE: Record<SizeKey, number> = { fine: 70, medium: 110, thick: 160 };
+const DECOR_SIZE_LABEL: Record<SizeKey, string> = { fine: "Small", medium: "Medium", thick: "Large" };
+/** A design holds up to this many views. */
+const MAX_VIEWS = 8;
 
 /** The icing marker lays down a wide, see-through band. */
 const MARKER_WIDEN = 2.6;
@@ -90,6 +99,8 @@ type BoardAction =
   | { type: "template"; template: SketchTemplate; record: boolean }
   | { type: "clear" }
   | { type: "restore"; snap: Snap }
+  /** A fresh start (the first shape or theme picked): no undo step. */
+  | { type: "load"; snap: Snap }
   | { type: "undo" }
   | { type: "redo" };
 
@@ -155,6 +166,8 @@ function boardReducer(s: BoardState, a: BoardAction): BoardState {
       return s.strokes.length ? { ...s, strokes: [], past: remember(s.past, snapOf(s)), future: [] } : s;
     case "restore":
       return { ...s, ...a.snap, past: remember(s.past, snapOf(s)), future: [] };
+    case "load":
+      return { ...s, ...a.snap };
     case "undo": {
       const prev = s.past.at(-1);
       return prev
@@ -171,6 +184,56 @@ function boardReducer(s: BoardState, a: BoardAction): BoardState {
     }
   }
 }
+
+/* ---------- views: each its own board with its own undo history ---------- */
+
+interface CakeState {
+  views: BoardState[];
+  /** The view on the board. */
+  at: number;
+}
+type CakeAction =
+  | { type: "board"; a: BoardAction }
+  | { type: "addView"; view: Snap }
+  | { type: "insertView"; at: number; view: BoardState }
+  | { type: "removeView"; at: number }
+  | { type: "goto"; at: number };
+
+const boardOf = (v: Snap): BoardState => ({ ...v, past: [], future: [] });
+
+function cakeReducer(s: CakeState, a: CakeAction): CakeState {
+  switch (a.type) {
+    case "board": {
+      const cur = s.views[s.at];
+      const next = boardReducer(cur, a.a);
+      if (next === cur) return s;
+      const views = s.views.slice();
+      views[s.at] = next;
+      return { ...s, views };
+    }
+    case "addView":
+      return s.views.length >= MAX_VIEWS ? s : { views: [...s.views, boardOf(a.view)], at: s.views.length };
+    case "insertView": {
+      const views = s.views.slice();
+      views.splice(a.at, 0, a.view);
+      return { views, at: a.at };
+    }
+    case "removeView": {
+      if (s.views.length < 2) return s;
+      const views = s.views.filter((_, i) => i !== a.at);
+      // Removing an earlier view keeps the same one on the board; removing this one shows its neighbour.
+      return { views, at: a.at < s.at ? s.at - 1 : Math.min(s.at, views.length - 1) };
+    }
+    case "goto":
+      return a.at === s.at || !s.views[a.at] ? s : { ...s, at: a.at };
+  }
+}
+
+const viewHasDrawing = (v: Snap) => v.strokes.length > 0 || Object.keys(v.layers).length > 0;
+const viewName = (views: Snap[], i: number) => {
+  const label = VIEW_LABEL[views[i].template];
+  return views.filter((v) => VIEW_LABEL[v.template] === label).length > 1 ? `${label} ${views.slice(0, i + 1).filter((v) => VIEW_LABEL[v.template] === label).length}` : label;
+};
 
 /* ---------- editor ---------- */
 
@@ -190,6 +253,8 @@ export interface DesignDraft {
   surface: string | null;
   /** Per-part fills (Fill tool), over the surface colour. */
   layers: Record<string, string>;
+  /** Views after the first. */
+  extra_views: SketchView[];
   notes: string | null;
 }
 
@@ -197,7 +262,7 @@ type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 /** Drawing inside another form (a new order): nothing is saved here; Done hands the drawing back. */
 export interface LocalDesign {
-  onDone: (d: { title: string; template: SketchTemplate; strokes: Stroke[]; surface: string | null; layers: Record<string, string>; notes: string | null }) => void;
+  onDone: (d: { title: string; template: SketchTemplate; strokes: Stroke[]; surface: string | null; layers: Record<string, string>; extra_views: SketchView[]; notes: string | null }) => void;
   onCancel: () => void;
 }
 
@@ -218,14 +283,15 @@ export function DesignEditor({
   const toast = useToast();
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const [board, dispatch] = useReducer(boardReducer, {
-    strokes: initial.strokes,
-    template: initial.template ?? "blank",
-    surface: initial.surface ?? null,
-    layers: initial.layers ?? {},
-    past: [],
-    future: [],
-  });
+  const [cake, edit] = useReducer(cakeReducer, null, () => ({
+    views: [
+      boardOf({ strokes: initial.strokes, template: initial.template ?? "blank", surface: initial.surface ?? null, layers: initial.layers ?? {} }),
+      ...(initial.extra_views ?? []).map((v) => boardOf({ strokes: v.strokes, template: v.template, surface: v.surface ?? null, layers: v.layers ?? {} })),
+    ],
+    at: 0,
+  }));
+  const board = cake.views[cake.at];
+  const dispatch = useCallback((a: BoardAction) => edit({ type: "board", a }), []);
   const [picking, setPicking] = useState(initial.template === null);
   const [title, setTitle] = useState(initial.title);
   const [orderId, setOrderId] = useState(initial.order_id);
@@ -237,8 +303,16 @@ export function DesignEditor({
   const [custom, setCustom] = useState<string | null>(null);
   const [sizeKey, setSizeKey] = useState<SizeKey>("medium");
   const [tip, setTip] = useState<PipingTip>("shell");
+  const [decorItem, setDecorItem] = useState<DecorItem>("words");
+  const [words, setWords] = useState("Happy Birthday");
+  const [digits, setDigits] = useState("1");
 
   const [sheet, setSheet] = useState<null | "notes" | "shape" | "colour" | "delete" | "more">(null);
+  /** The shape sheet changes this view's shape, or adds a new view. */
+  const [shapeMode, setShapeMode] = useState<"change" | "add">("change");
+  /** A shape or theme picked for a view that has drawing on it: waiting for the warning's answer. */
+  const [pending, setPending] = useState<{ snap: Snap; name: string } | null>(null);
+  const [numberPick, setNumberPick] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -249,7 +323,7 @@ export function DesignEditor({
     key: 0,
   });
   const showView = useCallback((mode: BoardView) => setView((v) => ({ mode, key: v.key + 1 })), []);
-  const openedWithDrawing = useRef(initial.strokes.length > 0);
+  const openedWithDrawing = useRef(initial.strokes.length > 0 || (initial.extra_views ?? []).some((v) => v.strokes.length > 0));
   useEffect(() => {
     const mq = window.matchMedia("(orientation: portrait)");
     const apply = () => showView(mq.matches && !openedWithDrawing.current ? "fill" : "fit");
@@ -269,7 +343,8 @@ export function DesignEditor({
   };
 
   const baseWidth = SIZES.find((s) => s.key === sizeKey)!.width;
-  const drawWidth = tool === "pipe" ? PIPE_SIZE[sizeKey] : tool === "marker" ? Math.round(baseWidth * MARKER_WIDEN * 10) / 10 : baseWidth;
+  const drawWidth = tool === "pipe" ? PIPE_SIZE[sizeKey] : tool === "decor" ? DECOR_SIZE[sizeKey] : tool === "marker" ? Math.round(baseWidth * MARKER_WIDEN * 10) / 10 : baseWidth;
+  const decorText = decorItem === "words" ? words.trim() || "Happy Birthday" : decorItem === "number-candle" ? digits.trim() || "1" : undefined;
   const fallbackTitle = initial.title || "New cake design";
   const backHref = fromOrder && orderId ? `/orders/${orderId}` : "/designs";
 
@@ -286,28 +361,24 @@ export function DesignEditor({
   const deleted = useRef(false);
   const touched = useRef(false);
 
-  const latest = useRef({
-    title,
-    orderId,
-    notes,
-    strokes: board.strokes,
-    template: board.template,
-    surface: board.surface,
-    layers: board.layers,
-  });
-  latest.current = {
-    title,
-    orderId,
-    notes,
-    strokes: board.strokes,
-    template: board.template,
-    surface: board.surface,
-    layers: board.layers,
+  const latest = useRef({ title, orderId, notes, views: cake.views });
+  latest.current = { title, orderId, notes, views: cake.views };
+
+  /** The design as saved: the first view in the row's own fields, the rest as extra views. */
+  const designOf = (views: Snap[]) => {
+    const [first, ...rest] = views;
+    return {
+      template: first.template,
+      strokes: first.strokes,
+      surface: first.surface,
+      layers: first.layers,
+      extra_views: rest.map((v) => ({ template: v.template, strokes: v.strokes, surface: v.surface, layers: v.layers })),
+    };
   };
 
   const hasContent = () => {
     const l = latest.current;
-    return l.strokes.length > 0 || touched.current || l.notes.trim() !== "" || l.surface !== null || Object.keys(l.layers).length > 0;
+    return touched.current || l.notes.trim() !== "" || l.views.length > 1 || l.views.some((v) => v.strokes.length > 0 || v.surface !== null || Object.keys(v.layers).length > 0);
   };
 
   const runSave = useCallback((): Promise<void> => {
@@ -321,10 +392,7 @@ export function DesignEditor({
     const input = {
       title: l.title.trim() || fallbackTitle,
       order_id: l.orderId,
-      template: l.template,
-      strokes: l.strokes,
-      surface: l.surface,
-      layers: l.layers,
+      ...designOf(l.views),
       notes: l.notes.trim() || null,
     };
     setStatus("saving");
@@ -371,17 +439,12 @@ export function DesignEditor({
   const prev = useRef(latest.current);
   useEffect(() => {
     const p = prev.current;
-    const changed =
-      p.strokes !== board.strokes || p.template !== board.template || p.surface !== board.surface || p.layers !== board.layers || p.title !== title || p.orderId !== orderId || p.notes !== notes;
-    prev.current = {
-      title,
-      orderId,
-      notes,
-      strokes: board.strokes,
-      template: board.template,
-      surface: board.surface,
-      layers: board.layers,
-    };
+    // Moving between views changes nothing that is saved.
+    const drawn = (vs: BoardState[]) => vs.map((v) => [v.strokes, v.template, v.surface, v.layers]).flat();
+    const a = drawn(p.views);
+    const b = drawn(cake.views);
+    const changed = a.length !== b.length || a.some((x, i) => x !== b[i]) || p.title !== title || p.orderId !== orderId || p.notes !== notes;
+    prev.current = { title, orderId, notes, views: cake.views };
     if (!changed || picking) return;
     version.current++;
     if (!idRef.current) {
@@ -395,7 +458,7 @@ export function DesignEditor({
       timer.current = null;
       void runSave();
     }, SAVE_DELAY);
-  }, [board.strokes, board.template, board.surface, board.layers, title, orderId, notes, picking, runSave]);
+  }, [cake.views, title, orderId, notes, picking, runSave]);
 
   // Leaving or hiding the page saves now; closing with unsaved lines asks first.
   useEffect(() => {
@@ -445,13 +508,14 @@ export function DesignEditor({
         if (k === "p") setTool("pen");
         else if (k === "m") setTool("marker");
         else if (k === "i") setTool("pipe");
+        else if (k === "d") setTool("decor");
         else if (k === "f") setTool("fill");
         else if (k === "e") setTool("eraser");
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [setTool]);
+  }, [setTool, dispatch]);
 
   /* ---------- actions ---------- */
 
@@ -462,7 +526,7 @@ export function DesignEditor({
     const before = snapOf(board);
     dispatch({ type: "clear" });
     toast({
-      message: "Cleared the board",
+      message: cake.views.length > 1 ? "Cleared this view" : "Cleared the board",
       action: {
         label: "Undo",
         onAction: () => dispatch({ type: "restore", snap: before }),
@@ -503,15 +567,73 @@ export function DesignEditor({
     dispatch({ type: "fill", part, color });
   };
 
+  /* ---------- views and shapes ---------- */
+
+  const openShapes = (mode: "change" | "add") => {
+    setShapeMode(mode);
+    setPending(null);
+    setNumberPick(false);
+    setSheet("shape");
+  };
+
+  const addView = (snap: Snap, name: string) => {
+    if (cake.views.length >= MAX_VIEWS) {
+      toast({ message: `A design holds up to ${MAX_VIEWS} views.` });
+      return;
+    }
+    edit({ type: "addView", view: snap });
+    setSheet(null);
+    setPending(null);
+    toast({ message: `Added a view: ${name}` });
+  };
+
+  const replaceView = (snap: Snap) => {
+    const before = snapOf(board);
+    dispatch({ type: "restore", snap });
+    setSheet(null);
+    setPending(null);
+    if (viewHasDrawing(before)) {
+      toast({
+        message: "Started this view again",
+        action: { label: "Undo", onAction: () => dispatch({ type: "restore", snap: before }) },
+      });
+    }
+  };
+
+  /** A shape or theme from the sheet: new view, straight swap, or the warning first. */
+  const choose = (snap: Snap, name: string) => {
+    if (shapeMode === "add") return addView(snap, name);
+    if (snap.template === board.template && !snap.strokes.length) {
+      setSheet(null);
+      return;
+    }
+    if (viewHasDrawing(board)) {
+      setPending({ snap, name });
+      return;
+    }
+    replaceView(snap.strokes.length ? snap : { ...snap, surface: board.surface });
+  };
+
+  const plain = (template: SketchTemplate): Snap => ({ template, strokes: [], surface: board.surface, layers: {} });
+
+  const removeView = (i: number) => {
+    if (cake.views.length < 2) return;
+    const gone = cake.views[i];
+    const name = viewName(cake.views, i);
+    edit({ type: "removeView", at: i });
+    setSheet(null);
+    toast({
+      message: `Removed the ${name} view`,
+      action: { label: "Undo", onAction: () => edit({ type: "insertView", at: i, view: gone }) },
+    });
+  };
+
   const goBack = async () => {
     if (local) {
       const l = latest.current;
       local.onDone({
         title: l.title.trim() || fallbackTitle,
-        template: l.template,
-        strokes: l.strokes,
-        surface: l.surface,
-        layers: l.layers,
+        ...designOf(l.views),
         notes: l.notes.trim() || null,
       });
       return;
@@ -531,13 +653,19 @@ export function DesignEditor({
     router.push(backHref);
   };
 
+  const others = useRef<HTMLDivElement>(null);
   const share = async () => {
     const svg = svgRef.current;
     if (!svg) return;
     const name = title.trim() || fallbackTitle;
     setSharing(true);
     try {
-      const file = await renderPicture(svg, name);
+      // The board shows one view; the others are drawn off screen for the picture.
+      const svgs = cake.views.map((_, i) => (i === cake.at ? svg : others.current?.querySelector<SVGSVGElement>(`[data-view="${i}"] svg`) ?? null));
+      const file = await renderPicture(
+        svgs.filter((x): x is SVGSVGElement => !!x),
+        name,
+      );
       if (canShareFile(file)) {
         try {
           await shareFile(file, name);
@@ -600,23 +728,19 @@ export function DesignEditor({
           </div>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-4 lg:px-6">
-          <ul className="mx-auto grid w-full max-w-5xl grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 landscape:max-w-[min(64rem,calc((100dvh-9rem)*1.8))] landscape:grid-cols-3">
-            {SKETCH_TEMPLATES.map((t) => (
-              <li key={t}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    dispatch({ type: "template", template: t, record: false });
-                    setPicking(false);
-                  }}
-                  className="group flex w-full flex-col gap-2 rounded-[12px] p-1.5 text-left transition-colors duration-150 hover:bg-shell-2 active:translate-y-px"
-                >
-                  <TemplateArt template={t} className="rounded-[8px] shadow-[0_0_0_1px_var(--shell-3)] group-hover:shadow-[0_0_0_2px_var(--shell-ink-2)]" />
-                  <span className="px-1 pb-1 font-display text-base font-semibold text-shell-ink">{TEMPLATE_LABEL[t]}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          <div className="mx-auto w-full max-w-5xl landscape:max-w-[min(64rem,calc((100dvh-9rem)*1.8))]">
+            <ShapeChoices
+              onShape={(t) => {
+                dispatch({ type: "load", snap: { template: t, strokes: [], surface: null, layers: {} } });
+                setPicking(false);
+              }}
+              onTheme={(snap) => {
+                dispatch({ type: "load", snap });
+                setPicking(false);
+              }}
+              tone="shell"
+            />
+          </div>
         </div>
       </div>
     );
@@ -627,7 +751,8 @@ export function DesignEditor({
   const swatchNamed = SWATCHES.find((s) => s.hex === color);
   const colorName = swatchNamed?.name ?? "Your colour";
   const n = board.strokes.length;
-  const toolName = tool === "pen" ? "Pen" : tool === "marker" ? "Icing marker" : tool === "pipe" ? `Piping, ${PIPE_TIP_LABEL[tip]}` : tool === "fill" ? "Fill" : "Eraser";
+  const toolName =
+    tool === "pen" ? "Pen" : tool === "marker" ? "Icing marker" : tool === "pipe" ? `Piping, ${PIPE_TIP_LABEL[tip]}` : tool === "decor" ? `Decor, ${DECOR[decorItem].label}` : tool === "fill" ? "Fill" : "Eraser";
   const surfaceHex = board.surface ?? VANILLA;
   const surfaceName = SURFACE_COLORS.find((c) => c.hex === surfaceHex)?.name ?? "Custom";
   const filledParts = CAKE_PARTS[board.template].filter((p) => board.layers[p.key]);
@@ -636,6 +761,8 @@ export function DesignEditor({
       ? "Tap a part of the cake to fill it"
       : tool === "pipe" && n === 0
         ? "Drag to pipe a run, or tap to place one"
+        : tool === "decor" && !board.strokes.some((s) => s.tool === "decor")
+          ? "Tap to place it. Drag a placed one to move it."
         : n === 0
           ? tool === "eraser"
             ? "Pick the pen to start drawing"
@@ -753,19 +880,20 @@ export function DesignEditor({
               color={color}
               size={drawWidth}
               tip={tip}
+              decor={{ item: decorItem, text: decorText }}
               surface={board.surface}
               layers={board.layers}
               onFill={fillPart}
-              label={`Drawing board: ${TEMPLATE_LABEL[board.template]}, ${n} ${n === 1 ? "line" : "lines"}. Draw with one finger, a stylus or the mouse; two fingers move and zoom the board.`}
+              label={`Drawing board${cake.views.length > 1 ? `, view ${cake.at + 1} of ${cake.views.length}` : ""}: ${TEMPLATE_LABEL[board.template]}, ${n} ${n === 1 ? "line" : "lines"}. Draw with one finger, a stylus or the mouse; two fingers move and zoom the board.`}
               view={view.mode}
               viewKey={view.key}
               onView={(mode) => setView((v) => ({ ...v, mode }))}
               onStroke={(stroke) => dispatch({ type: "add", stroke })}
-              onEraseStart={() => {
+              onEditStart={() => {
                 eraseBefore.current = snapOf(board);
               }}
-              onErase={(strokes) => dispatch({ type: "live", strokes })}
-              onEraseEnd={() => {
+              onEdit={(strokes) => dispatch({ type: "live", strokes })}
+              onEditEnd={() => {
                 if (eraseBefore.current) dispatch({ type: "commit", before: eraseBefore.current });
                 eraseBefore.current = null;
               }}
@@ -773,8 +901,21 @@ export function DesignEditor({
             {hint ? (
               <p className="pointer-events-none absolute inset-x-0 bottom-3 mx-auto w-fit max-w-[90%] rounded-full bg-shell/85 px-3.5 py-1.5 text-center text-sm font-medium text-shell-ink">{hint}</p>
             ) : null}
+            <ViewTabs views={cake.views} at={cake.at} onGoto={(i) => edit({ type: "goto", at: i })} onAdd={() => openShapes("add")} full={cake.views.length >= MAX_VIEWS} />
           </div>
         </div>
+        {/* The views not on the board, drawn off screen so Share can put every view in the picture. */}
+        {cake.views.length > 1 ? (
+          <div ref={others} aria-hidden className="pointer-events-none fixed top-0 -left-[200vw] w-[1000px] opacity-0">
+            {cake.views.map((v, i) =>
+              i === cake.at ? null : (
+                <div key={i} data-view={i}>
+                  <SketchPreview template={v.template} strokes={v.strokes} surface={v.surface} layers={v.layers} />
+                </div>
+              ),
+            )}
+          </div>
+        ) : null}
 
         {/* Colours, sizes and cake shape */}
         <section
@@ -782,6 +923,9 @@ export function DesignEditor({
           className="flex min-w-0 flex-col gap-1.5 px-2 pt-1 [grid-area:palette] landscape:w-[15rem] landscape:overflow-y-auto landscape:py-1 landscape:pr-[max(0.5rem,env(safe-area-inset-right))] landscape:pl-1 lg:landscape:w-auto lg:landscape:gap-2 lg:landscape:px-3 lg:landscape:pt-1"
         >
           {tool === "pipe" ? <PipePicker tip={tip} onTip={setTip} color={color} paper={frostingTones(board.surface).frost} onBorder={pipeBorder} canBorder={board.template !== "blank"} /> : null}
+          {tool === "decor" ? (
+            <DecorPicker item={decorItem} onItem={setDecorItem} color={color} paper={frostingTones(board.surface).frost} words={words} onWords={setWords} digits={digits} onDigits={setDigits} />
+          ) : null}
           {/* Phones wrap the colours onto two rows and name the chosen one; wide screens name every swatch. */}
           <div
             role="group"
@@ -810,7 +954,7 @@ export function DesignEditor({
                   key={s.key}
                   type="button"
                   aria-pressed={sizeKey === s.key}
-                  aria-label={`${s.label} line`}
+                  aria-label={tool === "decor" ? `${DECOR_SIZE_LABEL[s.key]} decoration` : `${s.label} line`}
                   onClick={() => setSizeKey(s.key)}
                   className={cx(
                     "flex h-14 min-w-14 flex-col items-center justify-center gap-0.5 rounded-[10px] px-1.5 text-xs font-medium transition-colors duration-150 max-sm:portrait:h-12 max-sm:portrait:min-w-12",
@@ -828,7 +972,7 @@ export function DesignEditor({
                       }}
                     />
                   </span>
-                  {s.label}
+                  {tool === "decor" ? DECOR_SIZE_LABEL[s.key] : s.label}
                 </button>
               ))}
             </div>
@@ -845,7 +989,7 @@ export function DesignEditor({
             <div className="flex min-w-0 flex-1 gap-1.5 landscape:flex-none landscape:flex-col lg:landscape:grid lg:landscape:grid-cols-2">
               <button
                 type="button"
-                onClick={() => setSheet("shape")}
+                onClick={() => openShapes("change")}
                 className="flex h-14 min-w-0 flex-1 items-center justify-center gap-2 rounded-[10px] px-2 max-sm:portrait:h-12 text-sm font-medium text-shell-ink shadow-[inset_0_0_0_1px_var(--shell-3)] transition-colors duration-150 hover:bg-shell-2 landscape:flex-none max-sm:portrait:flex-col max-sm:portrait:gap-0.5 max-sm:portrait:px-1 max-sm:portrait:text-xs lg:landscape:flex-col lg:landscape:gap-0.5 lg:landscape:text-xs"
               >
                 <Shapes className="size-5 shrink-0" aria-hidden />
@@ -890,6 +1034,12 @@ export function DesignEditor({
                 title: "Piping: drag to pipe a run of shapes, tap to place one (I)",
               },
               {
+                value: "decor",
+                icon: Decor,
+                label: "Decor",
+                title: "Decor: tap to place toppers, words, candles, sweets and figures; drag one to move it (D)",
+              },
+              {
                 value: "fill",
                 icon: PaintBucket,
                 label: "Fill",
@@ -913,7 +1063,7 @@ export function DesignEditor({
       </div>
       <p className="sr-only" aria-live="polite">
         {toolName}
-        {tool === "eraser" ? "" : tool === "fill" ? `, ${colorName}` : `, ${colorName}, ${SIZES.find((s) => s.key === sizeKey)!.label}`}
+        {tool === "eraser" ? "" : tool === "fill" ? `, ${colorName}` : `, ${colorName}, ${tool === "decor" ? DECOR_SIZE_LABEL[sizeKey] : SIZES.find((s) => s.key === sizeKey)!.label}`}
       </p>
 
       {/* Narrow phones: everything the one-row header leaves out. */}
@@ -947,7 +1097,9 @@ export function DesignEditor({
             {[
               { icon: NotebookPen, label: notes.trim() ? "Notes for the kitchen · has notes" : "Notes for the kitchen", run: () => setSheet("notes") },
               { icon: Share2, label: "Share picture", run: () => (setSheet(null), void share()) },
-              { icon: X, label: "Clear the board", run: () => (setSheet(null), clear()), disabled: !n },
+              { icon: Plus, label: "Add a view (top, side…)", run: () => openShapes("add"), disabled: cake.views.length >= MAX_VIEWS },
+              { icon: X, label: cake.views.length > 1 ? "Clear this view" : "Clear the board", run: () => (setSheet(null), clear()), disabled: !n },
+              ...(cake.views.length > 1 ? [{ icon: Trash2, label: `Remove the ${viewName(cake.views, cake.at)} view`, run: () => removeView(cake.at), danger: true }] : []),
               ...(local ? [] : [{ icon: Trash2, label: "Delete design", run: () => setSheet("delete"), danger: true }]),
             ].map(({ icon: Icon, label, run, disabled, danger }, i) => (
               <li key={label} className={i ? "sep-t" : undefined}>
@@ -993,32 +1145,96 @@ export function DesignEditor({
         </Field>
       </Sheet>
 
-      <Sheet open={sheet === "shape"} onClose={() => setSheet(null)} title="Cake shape" width="max-w-2xl">
-        <p className="mb-3 text-sm text-ink-2">Your lines stay where they are. Undo puts the old shape back.</p>
-        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {SKETCH_TEMPLATES.map((t) => (
-            <li key={t}>
-              <button
-                type="button"
-                aria-pressed={board.template === t}
-                onClick={() => {
-                  dispatch({ type: "template", template: t, record: true });
-                  setSheet(null);
-                }}
-                className={cx(
-                  "flex w-full flex-col gap-1.5 rounded-[10px] p-1.5 text-left transition-colors duration-150 hover:bg-surface-2",
-                  board.template === t && "bg-accent-wash shadow-[0_0_0_2px_var(--accent)]",
-                )}
-              >
-                <TemplateArt template={t} surface={board.surface} layers={board.layers} className="rounded-[6px] shadow-[0_0_0_1px_var(--line)]" />
-                <span className="flex items-center gap-1.5 px-0.5 font-display text-sm font-semibold">
-                  {board.template === t ? <Check className="size-4 shrink-0 text-accent" aria-hidden /> : null}
-                  {TEMPLATE_LABEL[t]}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
+      <Sheet
+        open={sheet === "shape"}
+        onClose={() => {
+          setSheet(null);
+          setPending(null);
+        }}
+        title={pending ? `Change to ${pending.name}?` : shapeMode === "add" ? "Add a view" : "Cake shape"}
+        width="max-w-2xl"
+        footer={
+          pending ? (
+            <>
+              <Button variant="ghost" onClick={() => setPending(null)}>
+                Cancel
+              </Button>
+              <Button variant="danger" className="ml-auto" onClick={() => replaceView(pending.snap.strokes.length ? pending.snap : { ...pending.snap, surface: board.surface })}>
+                Replace and clear
+              </Button>
+              <Button variant="primary" onClick={() => addView(pending.snap, pending.name)} disabled={cake.views.length >= MAX_VIEWS}>
+                <Plus aria-hidden />
+                Add as a new view
+              </Button>
+            </>
+          ) : shapeMode === "change" && cake.views.length > 1 ? (
+            <Button variant="danger" onClick={() => removeView(cake.at)}>
+              <Trash2 aria-hidden />
+              Remove this view
+            </Button>
+          ) : undefined
+        }
+      >
+        {pending ? (
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="grid shrink-0 grid-cols-2 gap-2 sm:w-72">
+              <figure>
+                <SketchPreview template={board.template} strokes={board.strokes} surface={board.surface} layers={board.layers} className="block aspect-[4/3] w-full rounded-[6px] shadow-[0_0_0_1px_var(--line)]" />
+                <figcaption className="mt-1 text-xs text-ink-2">This view now</figcaption>
+              </figure>
+              <figure>
+                <SketchPreview template={pending.snap.template} strokes={pending.snap.strokes} surface={pending.snap.strokes.length ? pending.snap.surface : board.surface} layers={pending.snap.layers} className="block aspect-[4/3] w-full rounded-[6px] shadow-[0_0_0_1px_var(--line)]" />
+                <figcaption className="mt-1 text-xs text-ink-2">{pending.name}</figcaption>
+              </figure>
+            </div>
+            <p className="text-ink">
+              Changing the shape <strong className="font-semibold">removes the design on this view</strong>. To keep it, add {pending.name} as a new view instead: a design can hold a top view, a side view and more.
+            </p>
+          </div>
+        ) : numberPick ? (
+          <div>
+            <p className="mb-3 text-sm text-ink-2">Which number is the cake?</p>
+            <ul className="grid grid-cols-5 gap-2">
+              {Array.from({ length: 10 }, (_, d) => {
+                const t = `number-${d}` as SketchTemplate;
+                return (
+                  <li key={d}>
+                    <button
+                      type="button"
+                      onClick={() => choose(plain(t), TEMPLATE_LABEL[t])}
+                      aria-label={TEMPLATE_LABEL[t]}
+                      className={cx("flex w-full flex-col items-center gap-1 rounded-[10px] p-1 hover:bg-surface-2", board.template === t && shapeMode === "change" && "bg-accent-wash shadow-[0_0_0_2px_var(--accent)]")}
+                    >
+                      <TemplateArt template={t} surface={board.surface} className="rounded-[6px] shadow-[0_0_0_1px_var(--line)]" />
+                      <span className="figures font-display text-md font-semibold">{d}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            <Button variant="ghost" className="mt-3" onClick={() => setNumberPick(false)}>
+              <ChevronLeft aria-hidden /> All shapes
+            </Button>
+          </div>
+        ) : (
+          <>
+            <p className="mb-3 text-sm text-ink-2">
+              {shapeMode === "add" ? "Pick the shape for the new view, like the top and the side of the same cake. This view stays as it is." : "Pick a shape, or a theme cake to start from. Want both? Add a view instead."}
+            </p>
+            <ShapeChoices
+              current={shapeMode === "change" ? board.template : null}
+              surface={board.surface}
+              onShape={(t) => (isNumberCake(t) ? setNumberPick(true) : choose(plain(t), TEMPLATE_LABEL[t]))}
+              onTheme={(snap, name) => choose(snap, `the ${name} theme`)}
+            />
+            {shapeMode === "change" ? (
+              <Button variant="secondary" className="mt-4 w-full sm:w-auto" onClick={() => setShapeMode("add")} disabled={cake.views.length >= MAX_VIEWS}>
+                <Plus aria-hidden />
+                Add another view instead
+              </Button>
+            ) : null}
+          </>
+        )}
       </Sheet>
 
       <Sheet open={sheet === "colour"} onClose={() => setSheet(null)} title="Cake colour" width="max-w-2xl">
@@ -1104,7 +1320,7 @@ export function DesignEditor({
         }
       >
         <p className="text-ink-2">
-          “{title.trim() || fallbackTitle}” and its notes will be removed
+          “{title.trim() || fallbackTitle}”{cake.views.length > 1 ? `, all ${cake.views.length} of its views` : ""} and its notes will be removed
           {orderId ? " from the order" : ""}. You can undo right after.
         </p>
       </Sheet>
@@ -1113,6 +1329,206 @@ export function DesignEditor({
 }
 
 /* ---------- pieces ---------- */
+
+/** The shapes, then the decorated theme cakes, as picture tiles. */
+function ShapeChoices({
+  current = null,
+  surface = null,
+  onShape,
+  onTheme,
+  tone = "surface",
+}: {
+  current?: SketchTemplate | null;
+  surface?: string | null;
+  onShape: (t: SketchTemplate) => void;
+  onTheme: (snap: Snap, name: string) => void;
+  tone?: "surface" | "shell";
+}) {
+  const shell = tone === "shell";
+  const tile = cx(
+    "group flex w-full flex-col gap-1.5 rounded-[10px] p-1.5 text-left transition-colors duration-150 active:translate-y-px",
+    shell ? "hover:bg-shell-2" : "hover:bg-surface-2",
+  );
+  const art = cx("rounded-[6px]", shell ? "shadow-[0_0_0_1px_var(--shell-3)] group-hover:shadow-[0_0_0_2px_var(--shell-ink-2)]" : "shadow-[0_0_0_1px_var(--line)]");
+  const name = cx("flex items-center gap-1.5 px-0.5 font-display font-semibold", shell ? "pb-1 text-base text-shell-ink" : "text-sm");
+  const heading = cx("mb-2 font-display text-base font-semibold", shell ? "text-shell-ink" : "text-ink");
+  const on = (t: SketchTemplate) => current !== null && (t === current || (isNumberCake(t) && isNumberCake(current)));
+  return (
+    <div className="flex flex-col gap-5">
+      <section>
+        <h3 className={heading}>Cake shapes</h3>
+        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+          {SHAPE_CHOICES.map((t) => (
+            <li key={t}>
+              <button type="button" aria-pressed={current !== null ? on(t) : undefined} onClick={() => onShape(t)} className={cx(tile, on(t) && "bg-accent-wash shadow-[0_0_0_2px_var(--accent)]")}>
+                <TemplateArt template={isNumberCake(t) && current && isNumberCake(current) ? current : t} surface={surface} className={art} />
+                <span className={name}>
+                  {on(t) ? <Check className="size-4 shrink-0 text-accent" aria-hidden /> : null}
+                  {isNumberCake(t) ? "Number cake" : TEMPLATE_LABEL[t]}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+      <section>
+        <h3 className={cx(heading, "flex items-center gap-2")}>
+          <Confetti className="size-5" aria-hidden />
+          Theme cakes
+        </h3>
+        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+          {THEMES.map((th) => (
+            <li key={th.key}>
+              <button type="button" onClick={() => onTheme({ ...th.view }, th.label)} className={tile}>
+                <SketchPreview template={th.view.template} strokes={th.view.strokes} surface={th.view.surface} layers={th.view.layers} title={th.label} className={cx("block aspect-[4/3] w-full", art)} />
+                <span className={name}>{th.label}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  );
+}
+
+/** The design's views as tabs over the board's top-left corner, with a button to add one. */
+function ViewTabs({ views, at, onGoto, onAdd, full }: { views: Snap[]; at: number; onGoto: (i: number) => void; onAdd: () => void; full: boolean }) {
+  return (
+    <div role="group" aria-label="Views of this cake" className="absolute top-2 left-2 z-10 flex max-w-[calc(100%-1rem)] items-center gap-0.5 overflow-x-auto overscroll-x-contain rounded-full bg-shell/90 p-1 shadow-[0_0_0_1px_var(--shell-3)] [scrollbar-width:none]">
+      {views.length > 1
+        ? views.map((v, i) => (
+            <button
+              key={i}
+              type="button"
+              aria-pressed={i === at}
+              onClick={() => onGoto(i)}
+              className={cx(
+                "flex h-11 shrink-0 items-center gap-1.5 rounded-full pr-3.5 pl-1.5 text-sm font-medium transition-colors duration-150",
+                i === at ? "bg-surface text-ink shadow-[0_0_0_1px_var(--shell-3)]" : "text-shell-ink-2 hover:bg-shell-2 hover:text-shell-ink",
+              )}
+            >
+              <span className="block w-11 shrink-0 overflow-hidden rounded-full" aria-hidden>
+                <TemplateArt template={v.template} surface={v.surface} layers={v.layers} />
+              </span>
+              {viewName(views, i)}
+            </button>
+          ))
+        : null}
+      <button
+        type="button"
+        onClick={onAdd}
+        disabled={full}
+        title={full ? `A design holds up to ${MAX_VIEWS} views` : "Add a view of this cake: the top, the side, another tier…"}
+        className="flex h-11 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold text-shell-ink transition-colors duration-150 hover:bg-shell-2 disabled:opacity-40"
+      >
+        <Plus className="size-4" weight="bold" aria-hidden />
+        {views.length > 1 ? "View" : "Add a view"}
+      </button>
+    </div>
+  );
+}
+
+/** The Decor tray: words and number candles take what to say; every item is drawn live in the icing colour. */
+function DecorPicker({
+  item,
+  onItem,
+  color,
+  paper,
+  words,
+  onWords,
+  digits,
+  onDigits,
+}: {
+  item: DecorItem;
+  onItem: (i: DecorItem) => void;
+  color: string;
+  paper: string;
+  words: string;
+  onWords: (w: string) => void;
+  digits: string;
+  onDigits: (d: string) => void;
+}) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1.5 lg:landscape:w-full lg:landscape:max-w-[18.5rem]">
+      {item === "words" ? (
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <input
+            value={words}
+            onChange={(e) => onWords(e.target.value)}
+            maxLength={40}
+            aria-label="Words to pipe"
+            list="decor-greetings"
+            placeholder="Happy Birthday, Ana!"
+            className="h-11 w-full min-w-0 rounded-[10px] bg-surface px-3 text-ink shadow-[0_0_0_1px_var(--shell-3)] placeholder:text-ink-3 focus:outline-2 focus:outline-focus"
+          />
+          <datalist id="decor-greetings">
+            {GREETINGS.map((g) => (
+              <option key={g} value={g} />
+            ))}
+          </datalist>
+          {/* Narrow phones suggest greetings from the field itself; wider screens show them as chips. */}
+          <div className="-mx-2 flex gap-1 overflow-x-auto overscroll-x-contain px-2 [scrollbar-width:none] max-sm:portrait:hidden landscape:mx-0 landscape:flex-wrap landscape:overflow-visible landscape:px-0">
+            {GREETINGS.map((g) => (
+              <button
+                key={g}
+                type="button"
+                aria-pressed={words === g}
+                onClick={() => onWords(g)}
+                className={cx(
+                  "h-9 shrink-0 rounded-full px-3 text-xs font-medium whitespace-nowrap transition-colors",
+                  words === g ? "bg-surface text-ink shadow-[0_0_0_2px_var(--accent)]" : "bg-shell-2 text-shell-ink hover:bg-shell-3",
+                )}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : item === "number-candle" ? (
+        <label className="flex items-center gap-2 text-sm font-medium text-shell-ink">
+          Number
+          <input
+            value={digits}
+            onChange={(e) => onDigits(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))}
+            inputMode="numeric"
+            maxLength={2}
+            aria-label="Number on the candle"
+            className="figures h-11 w-20 rounded-[10px] bg-surface px-3 text-center text-md font-semibold text-ink shadow-[0_0_0_1px_var(--shell-3)] focus:outline-2 focus:outline-focus"
+          />
+        </label>
+      ) : null}
+      <div role="group" aria-label="Decorations" className="-mx-2 flex gap-1 overflow-x-auto overscroll-x-contain px-2 pb-0.5 [scrollbar-width:none] landscape:mx-0 landscape:flex-col landscape:overflow-visible landscape:px-0">
+        {DECOR_GROUPS.map((g) => (
+          <div key={g.name} role="group" aria-label={g.name} className="flex shrink-0 gap-1 landscape:flex-col">
+            <span className="hidden text-2xs font-semibold tracking-wide text-shell-ink-2 uppercase landscape:block landscape:pt-1">{g.name}</span>
+            <div className="flex gap-1 landscape:grid landscape:grid-cols-3 lg:landscape:grid-cols-4">
+              {g.items.map((it) => {
+                const on = it === item;
+                return (
+                  <button
+                    key={it}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => onItem(it)}
+                    className={cx(
+                      "flex w-[4.25rem] shrink-0 flex-col items-center gap-0.5 rounded-[10px] p-1 text-2xs leading-tight font-medium transition-colors duration-150 landscape:w-auto",
+                      on ? "bg-surface text-ink shadow-[0_0_0_2px_var(--accent)]" : "text-shell-ink-2 hover:bg-shell-2 hover:text-shell-ink",
+                    )}
+                  >
+                    <svg viewBox="0 0 100 100" className="block aspect-square w-full max-w-14 rounded-[8px] shadow-[inset_0_0_0_1px_rgb(0_0_0/0.08)]" style={{ background: paper }} aria-hidden>
+                      <DecorSample item={it} color={color} text={it === "words" ? words || "Happy Birthday" : it === "number-candle" ? digits || "1" : undefined} />
+                    </svg>
+                    <span className="w-full truncate text-center">{DECOR[it].label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function BackButton({ onClick, label }: { onClick: () => void; label: string }) {
   return (
@@ -1318,10 +1734,18 @@ function PipePicker({ tip, onTip, color, paper, onBorder, canBorder }: { tip: Pi
               on ? "bg-surface text-ink shadow-[0_0_0_2px_var(--accent)]" : "text-shell-ink-2 hover:bg-shell-2 hover:text-shell-ink",
             )}
           >
-            <svg viewBox="0 0 100 100" className="block aspect-square w-full max-w-14 rounded-[8px] shadow-[inset_0_0_0_1px_rgb(0_0_0/0.08)]" style={{ background: paper }} aria-hidden>
-              <TipSample tip={t} color={color} />
-            </svg>
-            <span className="w-full truncate text-center">{PIPE_TIP_LABEL[t]}</span>
+            <span className="relative block w-full max-w-14">
+              <svg viewBox="0 0 100 100" className="block aspect-square w-full rounded-[8px] shadow-[inset_0_0_0_1px_rgb(0_0_0/0.08)]" style={{ background: paper }} aria-hidden>
+                <TipSample tip={t} color={color} />
+              </svg>
+              <span className="figures absolute top-0.5 left-0.5 rounded-[4px] bg-shell/90 px-1 text-2xs leading-[1.1rem] font-semibold text-shell-ink" aria-hidden>
+                {PIPE_TIP_NUMBER[t]}
+              </span>
+            </span>
+            <span className="w-full truncate text-center">
+              {PIPE_TIP_LABEL[t]}
+              <span className="sr-only">, tip {PIPE_TIP_NUMBER[t]}</span>
+            </span>
           </button>
         );
       })}

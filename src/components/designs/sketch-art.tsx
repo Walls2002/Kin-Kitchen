@@ -1,4 +1,4 @@
-import type { SketchTemplate, Stroke } from "@/lib/types";
+import { NUMBER_TEMPLATES, type SketchTemplate, type SketchView, type Stroke } from "@/lib/types";
 
 /**
  * Shared drawing primitives for the cake design board: the 1000 × 750 board,
@@ -20,12 +20,39 @@ export const TEMPLATE_LABEL: Record<SketchTemplate, string> = {
   "round-top": "Round cake, from above",
   "round-side": "Round cake, from the side",
   "two-tier": "Two tiers",
+  "three-tier": "Three tiers",
   sheet: "Sheet cake",
+  "square-tiers": "Square tiers",
   cupcakes: "Cupcakes",
+  heart: "Heart cake",
+  bento: "Bento box cake",
+  drip: "Drip cake",
+  ...(Object.fromEntries(NUMBER_TEMPLATES.map((t) => [t, `Number ${t.slice(7)} cake`])) as Record<(typeof NUMBER_TEMPLATES)[number], string>),
 };
+
+/** Short names for view tabs: "Top", "Side", "Tiers"… */
+export const VIEW_LABEL: Record<SketchTemplate, string> = {
+  blank: "Blank",
+  "round-top": "Top",
+  "round-side": "Side",
+  "two-tier": "2 tiers",
+  "three-tier": "3 tiers",
+  sheet: "Sheet",
+  "square-tiers": "Square",
+  cupcakes: "Cupcakes",
+  heart: "Heart",
+  bento: "Bento",
+  drip: "Drip",
+  ...(Object.fromEntries(NUMBER_TEMPLATES.map((t) => [t, `Number ${t.slice(7)}`])) as Record<(typeof NUMBER_TEMPLATES)[number], string>),
+};
+
+/** The shapes a design starts from, in picker order; one Number cake stands for all ten digits. */
+export const SHAPE_CHOICES = ["round-top", "round-side", "two-tier", "three-tier", "sheet", "square-tiers", "heart", "drip", "bento", "number-1", "cupcakes", "blank"] as const satisfies readonly SketchTemplate[];
+export const isNumberCake = (t: SketchTemplate) => t.startsWith("number-");
 
 export { TemplateGuide } from "./cake-art";
 import { TemplateGuide } from "./cake-art";
+import { DecorShape } from "./decor";
 import { PipeRun } from "./piping";
 
 /** A smooth path through the points: quadratic curves through the midpoints. */
@@ -54,6 +81,7 @@ export const isLight = (hex: string) => {
 
 export function StrokeShape({ s }: { s: Stroke }) {
   if (s.tool === "pipe") return <PipeRun s={s} />;
+  if (s.tool === "decor") return <DecorShape s={s} />;
   const d = strokePath(s.points);
   const common = { d, fill: "none", strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
   return (
@@ -90,5 +118,30 @@ export function SketchPreview({
         <StrokeShape key={i} s={s} />
       ))}
     </svg>
+  );
+}
+
+/** A design's first view, with its other views as small thumbnails in the corner. */
+export function ViewStrip({ views, title, className }: { views: SketchView[]; title: string; className?: string }) {
+  const [first, ...rest] = views;
+  return (
+    <div className={`relative ${className ?? ""}`}>
+      <SketchPreview template={first.template} strokes={first.strokes} surface={first.surface} layers={first.layers} title={rest.length ? `${title}, view 1 of ${views.length}` : title} className="block size-full" />
+      {rest.length ? (
+        <div className="pointer-events-none absolute right-1.5 bottom-1.5 flex w-[58%] justify-end gap-1">
+          {rest.slice(0, 3).map((v, i) => (
+            <SketchPreview
+              key={i}
+              template={v.template}
+              strokes={v.strokes}
+              surface={v.surface}
+              layers={v.layers}
+              title={`${title}, view ${i + 2} of ${views.length}`}
+              className="block aspect-[4/3] w-1/3 rounded-[5px] shadow-[0_0_0_1.5px_var(--surface),0_1px_4px_rgb(59_42_31/0.25)]"
+            />
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }

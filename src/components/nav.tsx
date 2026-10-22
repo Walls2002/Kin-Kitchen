@@ -26,7 +26,7 @@ import {
 } from "@/components/icons";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Mark } from "./mark";
+import { Lockup } from "./mark";
 import { NavPending } from "./nav-pending";
 import { cx } from "./ui";
 
@@ -109,9 +109,8 @@ export function Rail({ footer }: { footer?: React.ReactNode }) {
   };
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col bg-shell text-shell-ink shadow-[inset_-1px_0_0_var(--shell-3)] lg:flex">
-      <Link href="/" className="flex h-16 shrink-0 items-center gap-2.5 px-5 [--mark-ink:var(--shell)]">
-        <Mark className="size-7 text-shell-ink" />
-        <span className="text-md font-semibold tracking-tight">Kin Kitchen</span>
+      <Link href="/" className="flex h-16 shrink-0 items-center px-5">
+        <Lockup />
       </Link>
       <nav aria-label="Main" className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 pb-3 [scrollbar-color:var(--shell-3)_transparent]">
         {NAV.map((g) => (

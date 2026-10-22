@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Mark } from "@/components/mark";
+import { Lockup } from "@/components/mark";
 import { buttonClass } from "@/components/ui";
 import { isDemo } from "@/lib/env";
 import { LoginForm } from "./login-form";
@@ -10,12 +10,9 @@ export const metadata: Metadata = { title: "Log in" };
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
   return (
-    <main className="grid min-h-dvh place-items-center bg-shell px-4 py-10 [--mark-ink:var(--shell)]">
+    <main className="grid min-h-dvh place-items-center bg-shell px-4 py-10">
       <div className="w-full max-w-[400px]">
-        <div className="mb-6 flex items-center gap-2.5 text-shell-ink">
-          <Mark className="size-8" />
-          <span className="text-lg font-semibold tracking-tight">Kin Kitchen</span>
-        </div>
+        <Lockup size="hero" className="mb-6" />
         <div className="rounded-[16px] bg-surface px-6 pt-7 pb-8 sm:px-8">
           <h1 className="text-xl font-semibold tracking-tight">Log in</h1>
           <p className="mt-1 mb-6 text-ink-2">Your pantry, recipes, orders and money.</p>

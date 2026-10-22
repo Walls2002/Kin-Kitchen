@@ -28,6 +28,7 @@ export default async function DesignsPage() {
         strokes: s.strokes,
         surface: s.surface ?? null,
         layers: s.layers ?? {},
+        extra_views: s.extra_views ?? [],
         order: o ? orderLabel(o, true) : null,
         upcoming: !!o && o.due_date >= now && o.status !== "cancelled" && o.status !== "done",
         updated: relativeDays(s.updated_at),

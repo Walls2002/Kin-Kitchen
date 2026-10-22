@@ -5,7 +5,7 @@
  *  - "regular" by default (Phosphor's 1.5 stroke reads cleanly from 16px up),
  *  - "bold" where a call site asks for a heavier mark (strokeWidth ≥ 2.2, kept
  *    from the previous icon set so call sites read unchanged),
- *  - "duotone" for the selected nav item: a soft ube-tinted fill.
+ *  - "duotone" for the selected nav item: a soft cocoa-tinted fill.
  * The server-safe build is used so server and client components share it.
  */
 import type { ComponentProps } from "react";
@@ -85,6 +85,8 @@ export const Eraser = make(Ph.Eraser, "Eraser");
 export const Piping = make(Ph.Drop, "Piping");
 export const PaintBucket = make(Ph.PaintBucket, "PaintBucket");
 export const Shapes = make(Ph.Cake, "Shapes");
+export const Decor = make(Ph.Sparkle, "Decor");
+export const Confetti = make(Ph.Confetti, "Confetti");
 export const NotebookPen = make(Ph.Notepad, "NotebookPen");
 export const Expand = make(Ph.ArrowsOut, "Expand");
 export const Shrink = make(Ph.ArrowsIn, "Shrink");

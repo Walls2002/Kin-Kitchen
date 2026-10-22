@@ -4,8 +4,8 @@ import { ArrowLeft, ArrowRight, BellRing, Check, ChefHat, Palette, Pause, Play, 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Recipe, Sketch } from "@/lib/types";
-import { SketchPreview, TEMPLATE_LABEL } from "../designs/sketch-art";
+import { sketchViews, type Recipe, type Sketch } from "@/lib/types";
+import { SketchPreview, TEMPLATE_LABEL, VIEW_LABEL } from "../designs/sketch-art";
 import { Sheet } from "../sheet";
 import { useToast } from "../toast";
 import { Button, buttonClass, cx } from "../ui";
@@ -456,7 +456,7 @@ export function BakeMode({
         </section>
       </main>
 
-      {/* Back and Next, 64px, on a white strip so the ube Next stands out against the pandan frame */}
+      {/* Back and Next, 64px, on a white strip so the cocoa Next stands out against the pandan frame */}
       <nav aria-label="Steps" className="sep-t shrink-0 bg-surface px-2 pt-1 pb-[max(env(safe-area-inset-bottom),0.25rem)] text-ink sm:px-3 lg:px-4">
         <div className="mx-auto flex h-14 max-w-[1600px] gap-2">
           {phase === "ready" ? (
@@ -867,7 +867,13 @@ function AlarmBanner({ timer, text, more, onStop }: { timer: StepTimer; text: st
 
 function DesignView({ sketches, order, onClose }: { sketches: Sketch[]; order: BakeOrder | null; onClose: () => void }) {
   const [at, setAt] = useState(0);
-  const s = sketches[Math.min(at, sketches.length - 1)];
+  // Every view of every design on the order, in order: "Mila's cake · Top", "Mila's cake · Side".
+  const pages = sketches.flatMap((sk) => {
+    const views = sketchViews(sk);
+    return views.map((v, i) => ({ sk, v, key: `${sk.id}:${i}`, label: views.length > 1 ? (sketches.length > 1 ? `${sk.title} · ${VIEW_LABEL[v.template]}` : VIEW_LABEL[v.template]) : sk.title }));
+  });
+  const page = pages[Math.min(at, pages.length - 1)];
+  const s = page.sk;
   const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     closeRef.current?.focus();
@@ -897,16 +903,16 @@ function DesignView({ sketches, order, onClose }: { sketches: Sketch[]; order: B
             {s.title}
           </h2>
           <p className="truncate text-base leading-tight text-shell-ink-2">
-            {TEMPLATE_LABEL[s.template]}
+            {TEMPLATE_LABEL[page.v.template]}
             {order ? ` · order #${order.number}, ${order.customer}` : ""}
           </p>
         </div>
       </header>
-      {sketches.length > 1 ? (
-        <div role="group" aria-label="Designs" className="flex shrink-0 gap-2 overflow-x-auto px-2 pb-2 sm:px-3 lg:px-4">
-          {sketches.map((x, i) => (
+      {pages.length > 1 ? (
+        <div role="group" aria-label="Designs and views" className="flex shrink-0 gap-2 overflow-x-auto px-2 pb-2 sm:px-3 lg:px-4">
+          {pages.map((x, i) => (
             <button
-              key={x.id}
+              key={x.key}
               type="button"
               aria-pressed={i === at}
               onClick={() => setAt(i)}
@@ -915,14 +921,14 @@ function DesignView({ sketches, order, onClose }: { sketches: Sketch[]; order: B
                 i === at ? "bg-surface text-ink" : "bg-shell-2 text-shell-ink shadow-[inset_0_0_0_1px_var(--shell-3)] hover:bg-shell-3",
               )}
             >
-              {x.title}
+              {x.label}
             </button>
           ))}
         </div>
       ) : null}
       <div className="mx-auto grid min-h-0 w-full max-w-[1600px] flex-1 gap-2 px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] sm:px-3 landscape:sm:grid-cols-[minmax(0,1fr)_minmax(14rem,24rem)] lg:gap-4 lg:px-4 lg:pb-4">
         <div className="surface flex min-h-0 items-center justify-center overflow-hidden p-1">
-          <SketchPreview template={s.template} strokes={s.strokes} surface={s.surface} layers={s.layers} title={s.title} className="h-full max-h-full w-full" />
+          <SketchPreview template={page.v.template} strokes={page.v.strokes} surface={page.v.surface} layers={page.v.layers} title={page.label} className="h-full max-h-full w-full" />
         </div>
         {s.notes ? (
           <div className="surface max-h-[35dvh] overflow-y-auto px-4 py-3 text-ink landscape:sm:max-h-none lg:px-5 lg:py-4">

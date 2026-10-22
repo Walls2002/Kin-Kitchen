@@ -253,24 +253,99 @@ export interface DashboardView {
 
 /* ---------- design board ---------- */
 
-export const SKETCH_TEMPLATES = ["blank", "round-top", "round-side", "two-tier", "sheet", "cupcakes"] as const;
+/** Number cakes: one template per digit ("number-5"), picked from one "Number cake" choice. */
+export const NUMBER_TEMPLATES = ["number-0", "number-1", "number-2", "number-3", "number-4", "number-5", "number-6", "number-7", "number-8", "number-9"] as const;
+export const SKETCH_TEMPLATES = [
+  "blank",
+  "round-top",
+  "round-side",
+  "two-tier",
+  "three-tier",
+  "sheet",
+  "square-tiers",
+  "cupcakes",
+  "heart",
+  "bento",
+  "drip",
+  ...NUMBER_TEMPLATES,
+] as const;
 export type SketchTemplate = (typeof SKETCH_TEMPLATES)[number];
 
-/** One drawn line. Points are flat x,y pairs on a 1000 × 750 board. */
 /** Piping tips: shapes stamped along a stroke (a border) or placed with one tap. */
-export const PIPING_TIPS = ["shell", "star", "rosette", "pearl", "drop-flower", "leaf", "ruffle", "rope", "heart", "swirl"] as const;
+export const PIPING_TIPS = [
+  "shell",
+  "star",
+  "rosette",
+  "swirl",
+  "pearl",
+  "drop-flower",
+  "rose",
+  "petal",
+  "leaf",
+  "ruffle",
+  "ribbon",
+  "rope",
+  "zigzag",
+  "basket",
+  "grass",
+  "heart",
+] as const;
 export type PipingTip = (typeof PIPING_TIPS)[number];
 
+/** Cake accessories placed with the Decor tool: toppers, candles and sweets, figures. */
+export const DECOR_ITEMS = [
+  "words",
+  "number-candle",
+  "candle",
+  "sparkler",
+  "macaron",
+  "strawberry",
+  "cherry",
+  "chocolate",
+  "sprinkles",
+  "pearls",
+  "flower",
+  "bear",
+  "bunny",
+  "cat",
+  "unicorn",
+  "dinosaur",
+  "star",
+  "heart",
+  "balloon",
+  "crown",
+  "butterfly",
+  "rainbow",
+  "car",
+  "tree",
+  "snowman",
+  "candy-cane",
+  "holly",
+] as const;
+export type DecorItem = (typeof DECOR_ITEMS)[number];
+
 /**
- * One drawn line, or one run of piping. Points are flat x,y pairs on a 1000 × 750
- * board. For tool "pipe", each point pair is where one shape of `tip` sits.
+ * One drawn line, one run of piping, or one placed decoration. Points are flat x,y
+ * pairs on a 1000 × 750 board. For tool "pipe", each point pair is where one shape
+ * of `tip` sits; for "decor", the one pair is the item's centre and `size` its height.
  */
 export interface Stroke {
-  tool: "pen" | "marker" | "pipe";
+  tool: "pen" | "marker" | "pipe" | "decor";
   color: string;
   size: number;
   points: number[];
   tip?: PipingTip;
+  item?: DecorItem;
+  /** Words on a topper, or the digits of a number candle. */
+  text?: string;
+}
+
+/** One drawing of the cake: its shape, lines and colours. A design holds one or more. */
+export interface SketchView {
+  template: SketchTemplate;
+  strokes: Stroke[];
+  surface: string | null;
+  layers: Record<string, string>;
 }
 
 /** Frosting colours for the cake surface itself. */
@@ -302,7 +377,15 @@ export interface Sketch {
    * "tier2-side", "frosting-1".."frosting-3", "liner-1".."liner-3", "drum".
    */
   layers: Record<string, string>;
+  /** Views after the first (a top view, then a side view…); the fields above are the first. */
+  extra_views: SketchView[];
   notes: string | null;
   created_at: string;
   updated_at: string;
 }
+
+/** Every view of a design, first view first. */
+export const sketchViews = (s: Pick<Sketch, "template" | "strokes" | "surface" | "layers"> & { extra_views?: SketchView[] | null }): SketchView[] => [
+  { template: s.template, strokes: s.strokes, surface: s.surface ?? null, layers: s.layers ?? {} },
+  ...(s.extra_views ?? []),
+];

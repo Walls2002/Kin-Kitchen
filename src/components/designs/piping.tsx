@@ -16,13 +16,39 @@ export const PIPE_TIP_LABEL: Record<PipingTip, string> = {
   shell: "Shell",
   star: "Star",
   rosette: "Rosette",
+  swirl: "Swirl",
   pearl: "Pearl",
   "drop-flower": "Drop flower",
+  rose: "Rose",
+  petal: "Mini petals",
   leaf: "Leaf",
   ruffle: "Ruffle",
+  ribbon: "Ribbon swag",
   rope: "Rope",
+  zigzag: "Zigzag",
+  basket: "Basket weave",
+  grass: "Grass",
   heart: "Heart",
-  swirl: "Swirl",
+};
+
+/** The Wilton tip that pipes each shape, as bakers know them from the nozzle chart. */
+export const PIPE_TIP_NUMBER: Record<PipingTip, string> = {
+  shell: "21",
+  star: "20",
+  rosette: "1M",
+  swirl: "22",
+  pearl: "12",
+  "drop-flower": "2D",
+  rose: "104",
+  petal: "81",
+  leaf: "352",
+  ruffle: "104",
+  ribbon: "124",
+  rope: "6B",
+  zigzag: "21",
+  basket: "48",
+  grass: "233",
+  heart: "12",
 };
 
 /** Distance between shapes in a run, as a share of the shape's size. */
@@ -37,6 +63,12 @@ export const PIPE_SPACING: Record<PipingTip, number> = {
   "drop-flower": 1.1,
   swirl: 1.1,
   leaf: 1.1,
+  rose: 1.05,
+  petal: 1.05,
+  ribbon: 0.96,
+  zigzag: 0.98,
+  basket: 0.98,
+  grass: 0.5,
 };
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -85,7 +117,7 @@ function smooth(pts: V[]): string {
   return d + ` L${r2(e[0])} ${r2(e[1])}`;
 }
 
-/* ---------- the ten tips ---------- */
+/* ---------- the tips ---------- */
 
 const SHELL_D = "M50 3 C36 -2 18 -33 -14 -33 C-38 -33 -50 -17 -50 1 C-50 19 -37 33 -13 33 C14 33 35 9 50 3 Z";
 const shellRidges = [104, 136, 168, 200, 232, 262].map((deg) => {
@@ -159,6 +191,56 @@ const swirlFold = (() => {
   return smooth(pts);
 })();
 const SWIRL_PEAK = "M-9 4 C-12 -6 -6 -16 4 -18 C10 -19 14 -15 12 -10 C8 -12 3 -11 2 -6 C1 0 -3 5 -9 4 Z";
+
+
+/** Rose (104): three rings of cupped petals round a tight bud, seen from above. */
+const ROSE_D = polar(60, (t) => 46 + 2.2 * Math.sin(t * 5 + 0.4));
+const rosePetal = (r: number, a: number, span: number) => {
+  const p = (ang: number, rr: number) => `${r2(Math.cos(ang) * rr)} ${r2(Math.sin(ang) * rr)}`;
+  const m = a + span / 2;
+  return `M${p(a, r * 0.55)} Q${p(a - 0.08, r * 1.02)} ${p(m, r)} Q${p(a + span + 0.08, r * 1.02)} ${p(a + span, r * 0.55)} Q${p(m, r * 0.72)} ${p(a, r * 0.55)} Z`;
+};
+const ROSE_RINGS: { r: number; n: number; a0: number }[] = [
+  { r: 45, n: 5, a0: 0.3 },
+  { r: 33, n: 4, a0: 1.1 },
+  { r: 21, n: 3, a0: 0.2 },
+];
+const roseBud = (() => {
+  const pts: V[] = [];
+  for (let i = 0; i <= 30; i++) {
+    const f = i / 30;
+    const a = f * Math.PI * 3;
+    pts.push([Math.cos(a) * (2 + f * 9), Math.sin(a) * (2 + f * 9)]);
+  }
+  return smooth(pts);
+})();
+
+/** Mini petals (81): narrow cupped petals radiating from the centre, chrysanthemum style. */
+const PETAL_COUNT = 14;
+const miniPetal = (len: number, w: number) => `M6 ${-w * 0.45} L${len - w} ${-w} Q${len + w * 0.4} 0 ${len - w} ${w} L6 ${w * 0.45} Z`;
+
+/** Ribbon swag (124): a draped band hanging between two points, pleated where it gathers. */
+const RIBBON_D = "M-50 -20 C-26 26 26 26 50 -20 L50 -4 C26 44 -26 44 -50 -4 Z";
+const RIBBON_TOP = "M-50 -20 C-26 26 26 26 50 -20";
+const RIBBON_FOLD = "M-44 -12 C-22 28 22 28 44 -12";
+
+/** Zigzag (star tip 21): a ridged zig across the run; the ends meet the next one. */
+const ZIG = "M-50 16 L-25 -16 L0 16 L25 -16 L50 16";
+
+/** Basket weave (48): a ridged upright post with three flat bands woven across it. */
+const BASKET_BANDS = [-27, 0, 27];
+
+/** Grass (233): a tuft of fine strands standing out from the run. */
+const GRASS: [number, number, number][] = [
+  [-38, -10, 0.78],
+  [-27, 6, 0.95],
+  [-16, -6, 0.82],
+  [-5, 4, 1],
+  [6, -8, 0.88],
+  [17, 7, 0.97],
+  [28, -4, 0.8],
+  [38, 8, 0.9],
+];
 
 const ART: Record<PipingTip, TipArt> = {
   shell: {
@@ -289,6 +371,66 @@ const ART: Record<PipingTip, TipArt> = {
       </>
     ),
   },
+  rose: {
+    sil: <path d={ROSE_D} />,
+    body: (p, L) => (
+      <>
+        <path d={ROSE_D} fill={p.sh} stroke={p.line} strokeWidth={2.4} strokeLinejoin="round" />
+        {ROSE_RINGS.flatMap(({ r, n, a0 }, k) =>
+          Array.from({ length: n }, (_, i) => {
+            const span = (Math.PI * 2) / n + 0.35;
+            const a = a0 + (i * Math.PI * 2) / n;
+            const m = a + span / 2;
+            const b = (Math.cos(m) * L[0] + Math.sin(m) * L[1]) * 0.7 + k * 0.12;
+            return <path key={`${k}${i}`} d={rosePetal(r, a, span)} fill={lit(p, b)} stroke={p.line} strokeWidth={1.8} strokeLinejoin="round" />;
+          }),
+        )}
+        <circle r={11} fill={p.deep} />
+        <path d={roseBud} fill="none" stroke={p.base} strokeWidth={4} strokeLinecap="round" />
+        <path d={roseBud} fill="none" stroke={p.hi} strokeWidth={1.6} strokeLinecap="round" opacity={0.8} transform={`translate(${r2(L[0] * 1.5)} ${r2(L[1] * 1.5)})`} />
+      </>
+    ),
+  },
+  petal: {
+    sil: <circle r={47} />,
+    body: (p, L) => (
+      <>
+        {[0, 1].map((ring) =>
+          Array.from({ length: PETAL_COUNT }, (_, i) => {
+            const deg = (i * 360) / PETAL_COUNT + (ring ? 360 / PETAL_COUNT / 2 : 0);
+            const a = (deg * Math.PI) / 180;
+            const b = (Math.cos(a) * L[0] + Math.sin(a) * L[1]) * 0.8 + (ring ? 0.2 : -0.1);
+            const len = ring ? 34 : 47;
+            return (
+              <g key={`${ring}${i}`} transform={`rotate(${r2(deg)})`}>
+                <path d={miniPetal(len, ring ? 5.5 : 6.5)} fill={lit(p, b)} stroke={p.line} strokeWidth={1.6} strokeLinejoin="round" />
+                <path d={`M10 0 L${len - 9} 0`} stroke={p.sh} strokeWidth={1.6} strokeLinecap="round" opacity={0.7} />
+              </g>
+            );
+          }),
+        )}
+        <circle r={10} fill={p.deep} stroke={p.line} strokeWidth={1.4} />
+        <circle cx={r2(L[0] * 3)} cy={r2(L[1] * 3)} r={4} fill={p.hi} opacity={0.85} />
+      </>
+    ),
+  },
+  ribbon: {
+    sil: <path d={RIBBON_D} />,
+    body: (p) => (
+      <>
+        <path d={RIBBON_D} fill={p.base} stroke={p.line} strokeWidth={2.2} strokeLinejoin="round" />
+        <path d="M-50 -4 C-26 44 26 44 50 -4 L50 -10 C26 36 -26 36 -50 -10 Z" fill={p.sh} opacity={0.9} />
+        <path d={RIBBON_FOLD} fill="none" stroke={p.sh} strokeWidth={2} opacity={0.75} />
+        <path d={RIBBON_TOP} fill="none" stroke={p.hi} strokeWidth={4} strokeLinecap="round" opacity={0.9} transform="translate(0 3)" />
+        {[-46, 46].map((x) => (
+          <g key={x}>
+            <ellipse cx={x} cy={-12} rx={7} ry={11} fill={p.deep} />
+            <path d={`M${x - 3} -20 L${x - 3} -4 M${x + 3} -20 L${x + 3} -4`} stroke={p.sh} strokeWidth={1.4} />
+          </g>
+        ))}
+      </>
+    ),
+  },
   rope: {
     sil: <path d={ROPE_D} />,
     body: (p, L) => (
@@ -297,6 +439,59 @@ const ART: Record<PipingTip, TipArt> = {
         <path d="M-24 29 C4 20 28 2 44 -15" fill="none" stroke={p.deep} strokeWidth={3.4} strokeLinecap="round" opacity={0.7} />
         <path d="M-36 14 C-20 -8 6 -21 32 -21" fill="none" stroke={p.hi} strokeWidth={5} strokeLinecap="round" opacity={0.85} />
         <path d="M-30 24 C-10 10 14 -6 36 -12" fill="none" stroke={p.sh} strokeWidth={1.8} strokeLinecap="round" opacity={0.6} />
+      </>
+    ),
+  },
+  zigzag: {
+    sil: <path d={ZIG} fill="none" stroke="#000" strokeWidth={22} strokeLinejoin="round" strokeLinecap="round" />,
+    body: (p, L) => (
+      <>
+        <path d={ZIG} fill="none" stroke={p.line} strokeWidth={24} strokeLinejoin="round" strokeLinecap="round" />
+        <path d={ZIG} fill="none" stroke={p.sh} strokeWidth={20} strokeLinejoin="round" strokeLinecap="round" />
+        <path d={ZIG} fill="none" stroke={p.base} strokeWidth={14} strokeLinejoin="round" strokeLinecap="round" transform={`translate(${r2(L[0] * 2)} ${r2(L[1] * 2)})`} />
+        {[-5, 0, 5].map((o) => (
+          <path key={o} d={ZIG} fill="none" stroke={o ? p.sh : p.hi} strokeWidth={1.8} strokeLinejoin="round" opacity={o ? 0.7 : 0.9} transform={`translate(0 ${o})`} />
+        ))}
+      </>
+    ),
+  },
+  basket: {
+    sil: <rect x={-50} y={-40} width={100} height={80} rx={6} />,
+    body: (p, L) => (
+      <>
+        {BASKET_BANDS.map((y) => (
+          <g key={y}>
+            <rect x={-50} y={y - 11} width={100} height={22} rx={5} fill={p.base} stroke={p.line} strokeWidth={2} />
+            <rect x={-50} y={y + 3} width={100} height={8} rx={4} fill={p.sh} opacity={0.75} />
+            <path d={`M-46 ${y - 6} L46 ${y - 6}`} stroke={p.hi} strokeWidth={2.4} strokeLinecap="round" opacity={0.8} />
+            {[-30, -10, 10, 30].map((x) => (
+              <path key={x} d={`M${x} ${y - 9} L${x} ${y + 9}`} stroke={p.sh} strokeWidth={1.2} opacity={0.5} />
+            ))}
+          </g>
+        ))}
+        <rect x={-9} y={-42} width={18} height={84} rx={6} fill={lit(p, L[0] > 0 ? 0.25 : -0.25)} stroke={p.line} strokeWidth={2} />
+        {[-30, -12, 6, 24].map((y) => (
+          <path key={y} d={`M-6 ${y} L6 ${y + 4}`} stroke={p.sh} strokeWidth={1.6} strokeLinecap="round" opacity={0.8} />
+        ))}
+        <path d="M-4 -38 L-4 38" stroke={p.hi} strokeWidth={2} strokeLinecap="round" opacity={0.7} />
+      </>
+    ),
+  },
+  grass: {
+    sil: <path d="M-44 30 Q0 -50 44 30 Z" />,
+    body: (p) => (
+      <>
+        {GRASS.map(([x, lean, h], i) => {
+          const tip = -46 * h;
+          const d = `M${x} 30 Q${x + lean * 0.3} ${r2(tip * 0.4)} ${x + lean} ${r2(tip)}`;
+          return (
+            <g key={i}>
+              <path d={d} fill="none" stroke={p.line} strokeWidth={10} strokeLinecap="round" />
+              <path d={d} fill="none" stroke={i % 2 ? p.base : p.sh} strokeWidth={7} strokeLinecap="round" />
+              <path d={d} fill="none" stroke={p.hi} strokeWidth={2} strokeLinecap="round" opacity={0.7} transform="translate(-1.5 0)" />
+            </g>
+          );
+        })}
       </>
     ),
   },
@@ -416,10 +611,22 @@ export function layAlong(raw: number[], spacing: number, mode: "open" | "fit" | 
 /** A small rendered sample of a tip for the picker: a short run, or one shape for the flowers. */
 export function TipSample({ tip, color, size = 30 }: { tip: PipingTip; color: string; size?: number }) {
   const p = icingTones(color);
-  const single = tip === "rosette" || tip === "drop-flower" || tip === "swirl" || tip === "heart" || tip === "star";
+  const single = tip === "rosette" || tip === "drop-flower" || tip === "swirl" || tip === "heart" || tip === "star" || tip === "rose" || tip === "petal";
   if (single) return <PipeShape tip={tip} x={50} y={50} size={size * 2.1} angle={0} p={p} />;
   const gap = size * PIPE_SPACING[tip];
   const count = Math.max(2, Math.floor((88 - size) / gap) + 1);
+  if (tip === "grass" || tip === "basket" || tip === "zigzag" || tip === "ribbon") {
+    const n = tip === "grass" ? 4 : 2;
+    const step = tip === "grass" ? 18 : 40;
+    const at = 50 - ((n - 1) * step) / 2;
+    return (
+      <g>
+        {Array.from({ length: n }, (_, i) => (
+          <PipeShape key={i} tip={tip} x={r2(at + i * step)} y={tip === "grass" ? 60 : 50} size={tip === "grass" ? 36 : 40} angle={0} p={p} />
+        ))}
+      </g>
+    );
+  }
   const start = 50 - ((count - 1) * gap) / 2;
   return (
     <g>

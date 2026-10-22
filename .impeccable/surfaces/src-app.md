@@ -60,3 +60,11 @@ FIRST VIEWPORT: unchanged composition; Today on the pale pandan rail with the du
 FORM: Merienda tray, my top-ranked grounded candidate (pick card), seed key 491f68da. Signature move: the selected nav item's duotone ube icon on a white pill, and kakanin colours carried only by data (series, categories), never by chrome.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
+
+## Logo and cocoa actions (owner request, 2026-10-22)
+
+Owner: "I hate the purple touch" and supplied the KK-heart logo (brown on cream, Montserrat wordmark, "SISTERHOOD · DESSERTS · EST. 2026"). Owner chose cocoa brown for the action colour; the pandan shell stays. Ube is gone from chrome, focus, the selected nav icon, `chart-bar` and `series-2` (cocoa `#874420`, validator-passed); the app icon is the cream mark on logo brown. The Ube icing pen on the cake board stays: it is a drawing colour, not chrome. Supersedes every "ube action" above.
+
+## Cake board: views, warning, tips, decor, themes (owner request, 2026-10-22)
+
+Owner: changing shapes must warn that the current design will be removed; one cake can have several shapes (a top view and a side view); piping should be the typical piping-tip shapes (Wilton chart supplied); add accessories (Happy Birthday, cartoons) and theme cakes in the shapes. Answers: warn then offer Add as a new view / Replace and clear / Cancel; views as tabs inside one design; theme cakes = popular forms plus pre-decorated starters; accessories = toppers and words, candles and sweets, cartoons and figures. Built inside the existing board world (pandan shell, white labels, cocoa actions); no new chrome. Migration 0006 adds the new templates and `extra_views`.

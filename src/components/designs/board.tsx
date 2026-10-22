@@ -1,13 +1,14 @@
 "use client";
 
 import { memo, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject, type WheelEvent as ReactWheelEvent } from "react";
-import type { PipingTip, SketchTemplate, Stroke } from "@/lib/types";
+import type { DecorItem, PipingTip, SketchTemplate, Stroke } from "@/lib/types";
 import { partAt } from "./cake-art";
+import { DecorShape, decorReach } from "./decor";
 import { PIPE_SPACING, PipeShape, layAlong } from "./piping";
 import { BOARD_H, BOARD_PAPER, BOARD_W, StrokeShape, TemplateGuide } from "./sketch-art";
 import { icingTones } from "./tones";
 
-export type Tool = "pen" | "marker" | "pipe" | "fill" | "eraser";
+export type Tool = "pen" | "marker" | "pipe" | "decor" | "fill" | "eraser";
 /** Fit shows the whole board; fill makes the board as tall as its box and pans sideways. */
 export type BoardView = "fit" | "fill";
 
@@ -55,7 +56,14 @@ function segDist2(px: number, py: number, ax: number, ay: number, bx: number, by
   return qx * qx + qy * qy;
 }
 
+/** A placed decoration under (x, y), with `reach` to spare around it. */
+function overDecor(s: Stroke, x: number, y: number, reach: number) {
+  const { rx, ry } = decorReach(s);
+  return ((x - s.points[0]) / (rx + reach)) ** 2 + ((y - s.points[1]) / (ry + reach)) ** 2 <= 1;
+}
+
 function touches(s: Stroke, x: number, y: number) {
+  if (s.tool === "decor") return overDecor(s, x, y, ERASE_REACH);
   const tol = s.size / 2 + ERASE_REACH;
   const [x0, y0, x1, y1] = bbox(s);
   if (x < x0 - tol || x > x1 + tol || y < y0 - tol || y > y1 + tol) return false;
@@ -114,7 +122,10 @@ const onBoard = (x: number, y: number) => x >= 0 && x <= BOARD_W && y >= 0 && y 
 
 interface Gesture {
   id: number;
-  kind: "draw" | "erase" | "pipe" | "fill";
+  kind: "draw" | "erase" | "pipe" | "fill" | "decor";
+  /** Decor: the placed item being dragged (its index), and where it was grabbed from its centre. */
+  moving?: number;
+  grab?: [number, number];
   /** Screen → board, taken when the line starts (the view can't move mid-line). */
   inv: DOMMatrix;
   pen: boolean;
@@ -143,10 +154,11 @@ export function Board({
   color,
   size,
   onStroke,
-  onEraseStart,
-  onErase,
-  onEraseEnd,
+  onEditStart,
+  onEdit,
+  onEditEnd,
   tip,
+  decor,
   surface,
   layers,
   onFill,
@@ -163,14 +175,17 @@ export function Board({
   /** Line width in board units, marker widening already applied; for piping, the shape's size. */
   size: number;
   tip: PipingTip;
+  /** The Decor tool's item, and the words or digits it carries. */
+  decor: { item: DecorItem; text?: string };
   surface: string | null;
   layers: Record<string, string>;
   /** A Fill tap: the cake part under it, or null on bare paper. */
   onFill: (part: string | null) => void;
   onStroke: (s: Stroke) => void;
-  onEraseStart: () => void;
-  onErase: (remaining: Stroke[]) => void;
-  onEraseEnd: () => void;
+  /** An erase or a decoration drag: before it starts, each change as it goes, and when it ends (one undo step). */
+  onEditStart: () => void;
+  onEdit: (strokes: Stroke[]) => void;
+  onEditEnd: () => void;
   svgRef: RefObject<SVGSVGElement | null>;
   label: string;
   /** The view to show, re-applied (centred) whenever viewKey changes. */
@@ -224,7 +239,17 @@ export function Board({
     return Math.min(80, Math.max(1, Math.round(size * (0.7 + 0.6 * avg) * 10) / 10));
   };
 
+  const decorAt = (x: number, y: number): Stroke => ({
+    tool: "decor",
+    item: decor.item,
+    color,
+    size,
+    points: [Math.round(clampX(x)), Math.round(clampY(y))],
+    ...(decor.text ? { text: decor.text } : {}),
+  });
+
   const strokeOf = (g: Gesture): Stroke => {
+    if (g.kind === "decor") return decorAt(g.last[0], g.last[1]);
     if (g.kind === "pipe") {
       // A tap places one shape; a drag lays them evenly along the path.
       const p = g.points;
@@ -246,7 +271,7 @@ export function Board({
     frame.current = requestAnimationFrame(() => {
       frame.current = 0;
       const g = gesture.current;
-      if (g?.kind === "draw" || g?.kind === "pipe") setLive(strokeOf({ ...g, points: g.points.slice() }));
+      if (g?.kind === "draw" || g?.kind === "pipe" || (g?.kind === "decor" && g.moving === undefined)) setLive(strokeOf({ ...g, points: g.points.slice() }));
       setCursor(hoverAt.current);
     });
   };
@@ -271,8 +296,22 @@ export function Board({
     g.last = [x, y];
     if (left !== working.current) {
       working.current = left;
-      onErase(left);
+      onEdit(left);
     }
+  };
+
+  /** Drags a placed decoration so the point it was grabbed by follows the pointer. */
+  const dragDecor = (g: Gesture, x: number, y: number) => {
+    const i = g.moving!;
+    const s = working.current[i];
+    if (!s) return;
+    const nx = Math.round(clampX(x + g.grab![0]));
+    const ny = Math.round(clampY(y + g.grab![1]));
+    if (nx === s.points[0] && ny === s.points[1]) return;
+    const next = working.current.slice();
+    next[i] = { ...s, points: [nx, ny] };
+    working.current = next;
+    onEdit(next);
   };
 
   const addPoint = (g: Gesture, x: number, y: number, pressure: number) => {
@@ -299,8 +338,8 @@ export function Board({
     const g = gesture.current;
     if (g) {
       gesture.current = null;
-      if (g.kind === "draw" || g.kind === "pipe") setLive(null);
-      else if (g.kind === "erase") onEraseEnd();
+      if (g.kind === "draw" || g.kind === "pipe" || g.kind === "decor") setLive(null);
+      if (g.kind === "erase" || (g.kind === "decor" && g.moving !== undefined)) onEditEnd();
     }
     const [a, b] = two;
     pinch.current = {
@@ -360,7 +399,7 @@ export function Board({
     e.currentTarget.setPointerCapture(e.pointerId);
     const g: Gesture = {
       id: e.pointerId,
-      kind: tool === "eraser" ? "erase" : tool === "pipe" ? "pipe" : tool === "fill" ? "fill" : "draw",
+      kind: tool === "eraser" ? "erase" : tool === "pipe" ? "pipe" : tool === "decor" ? "decor" : tool === "fill" ? "fill" : "draw",
       inv,
       pen: e.pointerType === "pen",
       points: [Math.round(clampX(x)), Math.round(clampY(y))],
@@ -370,9 +409,21 @@ export function Board({
     gesture.current = g;
     if (g.kind === "erase") {
       working.current = strokes;
-      onEraseStart();
+      onEditStart();
       hoverAt.current = [x, y];
       eraseAlong(g, x, y);
+    } else if (g.kind === "decor") {
+      // Pressing on a placed decoration picks it up; anywhere else places a new one where the press ends.
+      for (let i = strokes.length - 1; i >= 0; i--) {
+        const s = strokes[i];
+        if (s.tool === "decor" && overDecor(s, x, y, 4)) {
+          g.moving = i;
+          g.grab = [s.points[0] - x, s.points[1] - y];
+          working.current = strokes;
+          onEditStart();
+          break;
+        }
+      }
     }
     paint();
   };
@@ -387,7 +438,7 @@ export function Board({
     }
     const g = gesture.current;
     if (!g) {
-      if ((tool === "eraser" || tool === "pipe") && e.pointerType !== "touch") {
+      if ((tool === "eraser" || tool === "pipe" || tool === "decor") && e.pointerType !== "touch") {
         hoverAt.current = toBoard(screenInverse(), e.clientX, e.clientY);
         paint();
       }
@@ -401,6 +452,9 @@ export function Board({
       if (g.kind === "erase") {
         eraseAlong(g, x, y);
         hoverAt.current = [x, y];
+      } else if (g.kind === "decor") {
+        if (g.moving !== undefined) dragDecor(g, x, y);
+        else g.last = [x, y];
       } else if (g.kind !== "fill") addPoint(g, x, y, ev.pressure);
     }
     paint();
@@ -419,6 +473,13 @@ export function Board({
       if (e.type === "pointerup") onFill(partAt(template, g.points[0], g.points[1]));
       return;
     }
+    if (g.kind === "decor") {
+      if (g.moving !== undefined) onEditEnd();
+      else if (e.type === "pointerup") onStroke(decorAt(...toBoard(g.inv, e.clientX, e.clientY)));
+      setLive(null);
+      if (e.pointerType === "touch") hoverAt.current = null;
+      return;
+    }
     if (g.kind === "draw" || g.kind === "pipe") {
       if (e.type === "pointerup") {
         const [x, y] = toBoard(g.inv, e.clientX, e.clientY);
@@ -427,7 +488,7 @@ export function Board({
       onStroke(strokeOf(g));
       setLive(null);
     } else {
-      onEraseEnd();
+      onEditEnd();
       if (e.pointerType === "touch") hoverAt.current = null;
       paint();
     }
@@ -469,7 +530,7 @@ export function Board({
         onContextMenu={(e) => e.preventDefault()}
         className="absolute inset-0 block size-full touch-none select-none [-webkit-touch-callout:none]"
         style={{
-          cursor: tool === "eraser" ? "none" : tool === "fill" ? "pointer" : "crosshair",
+          cursor: tool === "eraser" ? "none" : tool === "fill" ? "pointer" : tool === "decor" ? "copy" : "crosshair",
         }}
       >
         <rect width={BOARD_W} height={BOARD_H} fill={BOARD_PAPER} />
@@ -494,6 +555,11 @@ export function Board({
         {tool === "pipe" && cursor && !live ? (
           <g data-export="skip" pointerEvents="none" opacity={0.5}>
             <PipeShape tip={tip} x={Math.round(cursor[0])} y={Math.round(cursor[1])} size={size} angle={0} p={icingTones(color)} />
+          </g>
+        ) : null}
+        {tool === "decor" && cursor && !live && !gesture.current ? (
+          <g data-export="skip" pointerEvents="none" opacity={0.55}>
+            <DecorShape s={decorAt(cursor[0], cursor[1])} />
           </g>
         ) : null}
         {tool === "eraser" && cursor ? (

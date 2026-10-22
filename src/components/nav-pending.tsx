@@ -4,7 +4,7 @@ import { useLinkStatus } from "next/link";
 
 /**
  * Lives inside a nav <Link>. While that link's page is on its way it presses
- * the item and runs a thin ube bar across the top of the screen, so a tap is
+ * the item and runs a thin cocoa bar across the top of the screen, so a tap is
  * answered at once even when the server takes a moment. Hidden for the first
  * 120ms so fast navigations don't flicker.
  */

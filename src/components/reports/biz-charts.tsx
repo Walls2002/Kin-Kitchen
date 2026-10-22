@@ -730,3 +730,85 @@ export function CumulativeChart({
     </ChartPanel>
   );
 }
+
+/* ---------- Today: how the month is going ---------- */
+
+export interface PaceRow {
+  /** Day of the month, 1–31. */
+  d: number;
+  /** Sales added up from the 1st; null after today (this month) or past the month's end (last month). */
+  now: number | null;
+  prev: number | null;
+}
+
+/** This month's sales added up day by day, over the same running total for last month. */
+export function MonthPaceChart({
+  rows,
+  month,
+  prevMonth,
+  totals,
+  description,
+  children,
+  className,
+}: {
+  rows: PaceRow[];
+  /** "October", "September" */
+  month: string;
+  prevMonth: string;
+  totals: { now: number; prev: number };
+  description: ReactNode;
+  /** Facts under the chart. */
+  children?: ReactNode;
+  className?: string;
+}) {
+  const narrow = useNarrow();
+  const NOW = S1;
+  const PREV = "var(--ink-3)";
+  return (
+    <ChartPanel
+      className={className}
+      title={`How ${month} is going`}
+      description={description}
+      table={{
+        columns: ["Day", `${month} so far`, `${prevMonth} by that day`],
+        rows: rows.filter((r) => r.now !== null || r.prev !== null).map((r) => [String(r.d), r.now == null ? "—" : formatPesoWhole(r.now), r.prev == null ? "—" : formatPesoWhole(r.prev)]),
+      }}
+    >
+      <Legend
+        items={[
+          { label: `${month} so far`, color: NOW, kind: "line", note: formatPesoWhole(totals.now) },
+          { label: `${prevMonth}, whole month`, color: PREV, kind: "line", note: formatPesoWhole(totals.prev) },
+        ]}
+      />
+      <div className="h-[200px] sm:h-[230px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={rows} margin={{ top: 8, right: 12, bottom: 0, left: 4 }}>
+            <CartesianGrid vertical={false} {...grid} />
+            <XAxis dataKey="d" tick={tick} tickLine={false} axisLine={axisLine} tickMargin={8} ticks={[1, 8, 15, 22, 29].filter((t) => t <= rows.length)} />
+            <YAxis tick={tick} tickLine={false} axisLine={false} width={narrow ? 44 : 52} tickFormatter={(v: number) => formatPesoCompact(v)} />
+            <Tooltip
+              cursor={{ stroke: "var(--ink-3)", strokeDasharray: "3 3" }}
+              content={({ active, payload }) => {
+                const r = payload?.[0]?.payload as PaceRow | undefined;
+                if (!active || !r) return null;
+                return (
+                  <TipShell title={`By the ${ordinal(r.d)}`}>
+                    <ul className="flex flex-col gap-1">
+                      {r.now != null ? <TipRow color={NOW} label={month} value={formatPesoWhole(r.now)} strong /> : null}
+                      {r.prev != null ? <TipRow color={PREV} label={prevMonth} value={formatPesoWhole(r.prev)} /> : null}
+                    </ul>
+                  </TipShell>
+                );
+              }}
+            />
+            <Line dataKey="prev" name={prevMonth} type="monotone" stroke={PREV} strokeWidth={1.75} strokeDasharray="5 4" dot={false} activeDot={{ r: 4, stroke: "var(--surface)", strokeWidth: 2 }} connectNulls={false} isAnimationActive={false} />
+            <Line dataKey="now" name={month} type="monotone" stroke={NOW} strokeWidth={2.5} dot={false} activeDot={{ r: 4.5, stroke: "var(--surface)", strokeWidth: 2 }} connectNulls={false} isAnimationActive={false} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+      {children}
+    </ChartPanel>
+  );
+}
+
+const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : (["th", "st", "nd", "rd"][n % 10] ?? "th")}`;

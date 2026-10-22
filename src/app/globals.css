@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Kin Kitchen: a merienda tray. Buko white, latik ink, pandan shell, ube actions, yema for running low. */
+/* Kin Kitchen: a merienda tray. Buko white, latik ink, pandan shell, cocoa actions, yema for running low. */
 
 :root {
   color-scheme: light;
@@ -19,12 +19,12 @@
   --shell-3: oklch(0.875 0.06 128);
   --shell-ink: oklch(0.3 0.05 135);
   --shell-ink-2: oklch(0.45 0.05 135);
-  /* actions: ube */
-  --accent: oklch(0.45 0.13 300);
-  --accent-hover: oklch(0.39 0.13 300);
-  --accent-ink: oklch(0.99 0.005 300);
-  --accent-wash: oklch(0.95 0.03 305);
-  --focus: oklch(0.55 0.17 300);
+  /* actions: cocoa, the brown of the KK-heart logo */
+  --accent: oklch(0.37 0.05 52);
+  --accent-hover: oklch(0.31 0.05 52);
+  --accent-ink: oklch(0.98 0.012 85);
+  --accent-wash: oklch(0.94 0.025 60);
+  --focus: oklch(0.52 0.1 50);
   /* state: rise (strawberry-red), drop (pandan green), low (yema gold, reserved) */
   --rise: oklch(0.54 0.18 28);
   --rise-wash: oklch(0.96 0.025 28);
@@ -44,13 +44,13 @@
   --jar-fill: oklch(0.68 0.12 135);
   --jar-lid: oklch(0.42 0.05 50);
   --shelf: oklch(0.42 0.05 50);
-  /* chart series: pandan, ube, calamansi, blueberry, strawberry (validated, light surface) */
+  /* chart series: pandan, cocoa, calamansi, blueberry, strawberry (validated, light surface) */
   --series-1: #3e8a50;
-  --series-2: #6b4699;
+  --series-2: #874420;
   --series-3: #c2701c;
   --series-4: #3d7fb8;
   --series-5: #cc4b6c;
-  --chart-bar: oklch(0.47 0.12 300);
+  --chart-bar: #874420;
   --chart-grid: oklch(0.93 0.01 75);
   --scrim: oklch(0.3 0.04 50 / 0.35);
   --shadow-sheet: 0 18px 44px -14px oklch(0.35 0.05 50 / 0.28), 0 2px 6px oklch(0.35 0.05 50 / 0.1);
@@ -90,6 +90,7 @@
   --color-jar-fill: var(--jar-fill);
   --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-bricolage), var(--font-geist), ui-sans-serif, sans-serif;
+  --font-wordmark: var(--font-montserrat), var(--font-geist), ui-sans-serif, sans-serif;
   --radius-surface: 10px;
   /* fixed product scale, ratio ~1.2 */
   --text-2xs: 0.6875rem;
@@ -256,7 +257,7 @@
   --gs-freeze: #dadce0;
 }
 
-/* Navigation answers a tap at once: the pressed item tints, then an ube bar runs. */
+/* Navigation answers a tap at once: the pressed item tints, then a cocoa bar runs. */
 .nav-press {
   background: color-mix(in oklch, var(--shell-ink) 16%, transparent);
   animation: nav-fade-in 120ms ease-out 80ms both;

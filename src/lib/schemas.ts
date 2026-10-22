@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DECOR_ITEMS, PIPING_TIPS, SKETCH_TEMPLATES } from "./types";
 
 const positive = (label: string) =>
   z.number({ error: `Enter the ${label}` }).finite().positive(`${label[0].toUpperCase()}${label.slice(1)} must be more than 0`);
@@ -189,23 +190,29 @@ export const viewSchema = z.object({
 });
 export type ViewInput = z.infer<typeof viewSchema>;
 
+const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/);
+const strokeSchema = z.object({
+  tool: z.enum(["pen", "marker", "pipe", "decor"]),
+  color: hex,
+  size: z.number().min(1).max(400),
+  points: z.array(z.number().finite()).max(20000),
+  tip: z.enum(PIPING_TIPS).optional(),
+  item: z.enum(DECOR_ITEMS).optional(),
+  text: z.string().max(40).optional(),
+});
+const tooMany = "This design has too many lines to save. Clear some and try again.";
+const sketchViewSchema = z.object({
+  template: z.enum(SKETCH_TEMPLATES),
+  strokes: z.array(strokeSchema).max(3000, tooMany),
+  surface: hex.nullable().default(null),
+  layers: z.record(z.string().regex(/^[a-z0-9-]{1,20}$/), hex).default({}),
+});
+
 export const sketchSchema = z.object({
   title: z.string().trim().min(1, "Name the design").max(80, "Keep the name under 80 characters"),
   order_id: z.string().min(1).nullable(),
-  template: z.enum(["blank", "round-top", "round-side", "two-tier", "sheet", "cupcakes"]),
-  strokes: z
-    .array(
-      z.object({
-        tool: z.enum(["pen", "marker", "pipe"]),
-        color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-        size: z.number().min(1).max(120),
-        points: z.array(z.number().finite()).max(20000),
-        tip: z.enum(["shell", "star", "rosette", "pearl", "drop-flower", "leaf", "ruffle", "rope", "heart", "swirl"]).optional(),
-      }),
-    )
-    .max(3000, "This design has too many lines to save. Clear some and try again."),
-  surface: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().default(null),
-  layers: z.record(z.string().regex(/^[a-z0-9-]{1,20}$/), z.string().regex(/^#[0-9a-fA-F]{6}$/)).default({}),
+  ...sketchViewSchema.shape,
+  extra_views: z.array(sketchViewSchema).max(7, "A design can hold up to 8 views").default([]),
   notes: optionalText(1000),
 });
 export type SketchInput = z.infer<typeof sketchSchema>;

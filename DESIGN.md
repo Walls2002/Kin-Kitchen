@@ -15,11 +15,11 @@ colors:
   shell-3: "oklch(0.875 0.06 128)"
   shell-ink: "oklch(0.3 0.05 135)"
   shell-ink-2: "oklch(0.45 0.05 135)"
-  accent: "oklch(0.45 0.13 300)"
-  accent-hover: "oklch(0.39 0.13 300)"
-  accent-ink: "oklch(0.99 0.005 300)"
-  accent-wash: "oklch(0.95 0.03 305)"
-  focus: "oklch(0.55 0.17 300)"
+  accent: "oklch(0.37 0.05 52)"
+  accent-hover: "oklch(0.31 0.05 52)"
+  accent-ink: "oklch(0.98 0.012 85)"
+  accent-wash: "oklch(0.94 0.025 60)"
+  focus: "oklch(0.52 0.1 50)"
   rise: "oklch(0.54 0.18 28)"
   rise-wash: "oklch(0.96 0.025 28)"
   rise-on-shell: "oklch(0.5 0.18 28)"
@@ -34,11 +34,11 @@ colors:
   jar-fill: "oklch(0.68 0.12 135)"
   jar-lid: "oklch(0.42 0.05 50)"
   series-1: "#3e8a50"
-  series-2: "#6b4699"
+  series-2: "#874420"
   series-3: "#c2701c"
   series-4: "#3d7fb8"
   series-5: "#cc4b6c"
-  chart-bar: "oklch(0.47 0.12 300)"
+  chart-bar: "#874420"
   chart-grid: "oklch(0.93 0.01 75)"
   chrome: "#e8f1de"
   manifest-bg: "#faf8f3"
@@ -392,16 +392,16 @@ components:
 
 **Creative North Star: "The Merienda Tray"**
 
-Kin Kitchen is a merienda tray set out on the counter: buko-white paper, white label surfaces, latik-brown ink, a pale pandan-leaf shell around the edge, ube for every action, and yema gold kept for one job, running low. It is always light. The owner asked for a bright kitchen app in baking colours that does not look like a generated template, so the kakanin colours (pandan, ube, calamansi, blueberry, strawberry) are carried by data (chart series, category dots, the icing palette) and never by chrome. The chrome is quiet: pale pandan rail and tab bar with a hairline edge, white labels pulled off it for the selected place.
+Kin Kitchen is a merienda tray set out on the counter: buko-white paper, white label surfaces, latik-brown ink, a pale pandan-leaf shell around the edge, cocoa (the brown of the KK-heart logo) for every action, and yema gold kept for one job, running low. It is always light. The owner asked for a bright kitchen app in baking colours that does not look like a generated template, so the kakanin colours (pandan, cocoa, calamansi, blueberry, strawberry) are carried by data (chart series, category dots, the icing palette) and never by chrome. The chrome is quiet: pale pandan rail and tab bar with a hairline edge, white labels pulled off it for the selected place.
 
 The structure underneath carried over unchanged from the previous world. Home is **Today** (stat strip, orders due, tasks, running-low canisters, the next tax return). Money lists are ledger sheets; statements are white labels with locked computed lines; a recipe's price label prints cost per unit as its one large figure; an ingredient opens as a labelled canister whose fill is its stock. The Ingredients route, at the owner's request, copies Google Sheets outright (column letters, row numbers, a formula bar, blue selection, category sheet tabs), and that copy keeps its own scoped greys and blue.
 
-Two full-bleed kitchen surfaces sit inside the same world. **Bake mode** is the recipe card propped against the flour tin: the pandan shell becomes the whole frame, the current step sits on a white label in big Bricolage, every ingredient stays in view, and timers are pills that ring and flash ube. The **cake design board** is the cake-box-lid sketch: a 4:3 board of cake outlines, named icing swatches and 56px tools on the pandan shell. Density elsewhere is operational: one-tap checks on a phone in the kitchen, whole-sheet review on a PC.
+Two full-bleed kitchen surfaces sit inside the same world. **Bake mode** is the recipe card propped against the flour tin: the pandan shell becomes the whole frame, the current step sits on a white label in big Bricolage, every ingredient stays in view, and timers are pills that ring and flash cocoa. The **cake design board** is the cake-box-lid sketch: a 4:3 board of cake outlines, named icing swatches and 56px tools on the pandan shell. Density elsewhere is operational: one-tap checks on a phone in the kitchen, whole-sheet review on a PC.
 
 **Key Characteristics:**
 - Always light: buko-white ground, white label surfaces, latik-brown ink; no dark mode, no dark chrome.
 - A pale pandan shell (rail, tab bar, toasts, Bake and board frames) with a hairline `shell-3` edge and dark pandan ink.
-- Ube is the only action colour (primary buttons, focus, selection, the selected nav icon in duotone).
+- Cocoa is the only action colour (primary buttons, focus, selection, the selected nav icon in duotone).
 - Kakanin colours live in data only: five validated chart series, the fixed category legend, the icing palette.
 - Yema gold means running low, and nothing else.
 - Anything the app works out is locked behind a lock icon on a recessed tint, never editable.
@@ -411,12 +411,12 @@ Two full-bleed kitchen surfaces sit inside the same world. **Bake mode** is the 
 
 ## Colors
 
-A warm, light palette: every neutral carries a little cream or latik hue (50 to 90 in OKLCH), the shell is a pale leaf green (128 to 135), ube (300) does all the acting, and three state hues hold single jobs.
+A warm, light palette: every neutral carries a little cream or latik hue (50 to 90 in OKLCH), the shell is a pale leaf green (128 to 135), cocoa (50 to 52, the logo brown) does all the acting, and three state hues hold single jobs.
 
 ### Primary
-- **Ube Action** (`accent`, hover `accent-hover`, text `accent-ink`): primary buttons, Bake mode's Next and timer Stop, the floating add pill, text selection, the selected nav icon, done task checkboxes, the progress segments of a bake. The app icon draws its mark on the same ube as `series-2`.
-- **Ube Wash** (`accent-wash`): Baking order status, the draft row of a ledger sheet, the recipe price label's cost band, the fresh history label's landing flash, the More page's icon tiles, the open-detail link hover, Bake mode's current-ingredient highlight and its "start timer" control.
-- **Ube Focus** (`focus`): focus rings, cell editor rings, the input caret, the saving dot and the nav-pending progress bar along the top of the screen.
+- **Cocoa Action** (`accent`, hover `accent-hover`, text `accent-ink`): primary buttons, Bake mode's Next and timer Stop, the floating add pill, text selection, the selected nav icon, done task checkboxes, the progress segments of a bake. The owner rejected ube purple (2026-10-22); cocoa is sampled from the KK-heart logo (#523727) and sits a step lighter and warmer than `ink` so actions still read as actions.
+- **Cocoa Wash** (`accent-wash`): Baking order status, the draft row of a ledger sheet, the recipe price label's cost band, the fresh history label's landing flash, the More page's icon tiles, the open-detail link hover, Bake mode's current-ingredient highlight and its "start timer" control.
+- **Cocoa Focus** (`focus`): focus rings, cell editor rings, the input caret, the saving dot and the nav-pending progress bar along the top of the screen.
 
 ### Secondary
 - **Strawberry Rise** (`rise`, `rise-wash`): a cost-per-unit increase; a business move that is bad for the owner (sales or profit fall, expense rise, loss, margin under target, overdue group, late task); an open balance only when due today or late; form errors, failed saves (2px inset ring) and the danger button. `rise-on-shell` is the error ink on a pandan toast and on the board's error notes.
@@ -435,13 +435,13 @@ A warm, light palette: every neutral carries a little cream or latik hue (50 to 
 
 ### Canister and chart
 - **Jar** (`jar-glass`, `jar-rim`, `jar-fill`, `jar-lid`): the canister gauge. A cream glass, a warm rim, a pandan fill, a latik lid.
-- **Chart series** (`series-1` to `series-5`): pandan, ube, calamansi, blueberry, strawberry, validated on the light surface in that order. Multi-series charts and the recipe cost bar take them in order; single-series and rank bars use `chart-bar` (ube); gridlines use `chart-grid`.
+- **Chart series** (`series-1` to `series-5`): pandan, cocoa, calamansi, blueberry, strawberry, validated on the light surface in that order (cocoa `#874420` replaced ube 2026-10-22 and passes every check). Multi-series charts and the recipe cost bar take them in order; single-series and rank bars use `chart-bar` (cocoa); gridlines use `chart-grid`.
 
 ### Category legend
 Category dots are computed, not tokenised: `oklch(0.66 0.13 H)` with hues cycled in the fixed order 62, 352, 232, 30, 300, 195, 140, 18, 265, 165, 330, 100. No hue falls between 63 and 99, the yema band. A dot is always shown beside its category name.
 
 ### Browser chrome
-`chrome` is the theme colour for the browser and installed app (layout `themeColor` and manifest `theme_color`), a pale pandan that matches the shell. `manifest-bg` is the manifest background. The app icon is an ube (`series-2`) tile with the canister mark in `icon-ink`.
+`chrome` is the theme colour for the browser and installed app (layout `themeColor` and manifest `theme_color`), a pale pandan that matches the shell. `manifest-bg` is the manifest background. The app icon is a logo-brown `#523727` tile with the KK-heart mark in cream `#f7f3e8`; the PWA icon keeps the mark inside the maskable safe circle.
 
 ### Scoped exception: Google Sheets greys and blue
 The Ingredients sheet copies Google Sheets at the owner's request. Its colours are declared only under `.gsheet` (grid `#e2e3e3`, strong grid `#c4c7c5`, header band `#f8f9fa`, header ink `#5f6368`, active header `#d3e3fd` with `#0b57d0` ink, selection `#1a73e8`, freeze bar `#dadce0`) and are used nowhere else. They are an owner-pinned exception, not system tokens; no other surface may borrow them.
@@ -452,7 +452,7 @@ The cake design board offers named icing swatches as drawing colours, not UI tok
 ### Named Rules
 **The One Job Yellow Rule.** Yema gold means running low and nothing else. No highlights, warnings, category dots, chart series or icing chrome in the yellow band.
 
-**The Data Wears The Kakanin Rule.** Pandan, ube, calamansi, blueberry and strawberry appear as data (series, categories, icing), never as decoration. Chrome stays buko, white, latik, pale pandan and the single ube action.
+**The Data Wears The Kakanin Rule.** Pandan, cocoa, calamansi, blueberry and strawberry appear as data (series, categories, icing), never as decoration. Chrome stays buko, white, latik, pale pandan and the single cocoa action.
 
 **The Never Colour Alone Rule.** A rise always carries an up arrow and a signed or percentage figure; a drop a down arrow; low always says "Low" in words.
 
@@ -462,7 +462,10 @@ The cake design board offers named icing swatches as drawing colours, not UI tok
 
 **The Receivables Are Not Rises Rule.** An open balance is a neutral `surface-2` pill with the amount; it takes `rise-wash` only when the order is due today or overdue and still owes. Paid is a green check and the word.
 
-**The Order Status Rule.** Order status uses neutral, ube wash and shell only: To do on white, Baking on `accent-wash`, Done on `shell`, Cancelled on `surface-2` struck through, each with icon and word. Never yema, `rise` or `drop`.
+**The Order Status Rule.** Order status uses neutral, cocoa wash and shell only: To do on white, Baking on `accent-wash`, Done on `shell`, Cancelled on `surface-2` struck through, each with icon and word. Never yema, `rise` or `drop`.
+
+### Logo
+The owner's KK-heart logo (2026-10-22): two Ks facing each other, joined by a heart whose point loops into a knot, beside "Kin / Kitchen" stacked and the tagline "SISTERHOOD · DESSERTS · EST. 2026". `Mark` in `src/components/mark.tsx` is a stroke trace of it on a 930x720 box; the logo's own weight is 22 units, and small marks take a heavier stroke (50 in the rail, 34 on login) so they stay crisp. `Lockup` sets the wordmark in Montserrat 500 (`font-wordmark`, used nowhere else) in `accent`: compact in the rail, with the tagline on login. The mark is always one colour, never a gradient or outline box.
 
 ## Typography
 
@@ -503,7 +506,7 @@ Desktop (1024px and up): a fixed 240px pale pandan rail on the left with a 1px `
 
 The rail lists Today and Tasks, then Sell (Orders, Recipes, Cake designs), Money (Income, Expenses, Tax), Reports (Monthly, Annual, Products, Statements, 5-year growth), Pantry (Ingredients, Pantry insights), then How to use and Settings. The phone tabs are Today, Orders, Pantry, Money, More. Sibling pages in Money and Reports share section tabs under the header.
 
-Today is a header, a four-stat strip, then a 1.45fr / 1fr grid (one column below 1024px): Orders due left; tasks, Running low and the next tax return right. Recipe editor and order form put a fixed aside on the right (340 to 400px, 320 to 390px). The manual sets a 14rem sticky chapter list beside a 68ch reading column from 1024px.
+Today (reworked 2026-10-22, owner: "more user friendly but informative") is a header with the date and a plain one-line brief ("1 order due today · 3 tasks left · 8 things to buy", overdue first in `rise`), a four-stat strip (sales, profit after costs, to collect, orders done; deltas read "vs Sep 1–22"), then a 1.45fr / 1fr grid. Left: **This week** (seven day tiles, each with its order count, pieces to bake and a cocoa load bar against the week's busiest day; tapping a day lists only its orders; the whole week shows the next four orders, then "Show all") and **How October is going** (this month's running sales total in `series-1` over last month's in a dashed `ink-3`, a one-line verdict ahead or behind by this day, then best seller, top earner and spending). Right: tasks, **To buy** (running-low canisters with how many packages refill each to full and what that costs at the saved price, totalled in the description) and the next tax return. Below 1024px it is one column in kitchen order: week, tasks, to buy, month, tax. Recipe editor and order form put a fixed aside on the right (340 to 400px, 320 to 390px). The manual sets a 14rem sticky chapter list beside a 68ch reading column from 1024px.
 
 Ledger sheets (income, expenses) keep their own scroll frame, sticky header, pinned first column and 44px rows. The Ingredients sheet sits in its Sheets frame: a search and filter row, a formula bar, the grid with a 46px row-number gutter and 24px column-letter band, 32px rows (44px below 1024px), and category sheet tabs along the bottom.
 
@@ -537,7 +540,7 @@ Phosphor, imported only through the vocabulary module so one glyph means one thi
 ### Buttons
 Calm and solid; one primary per view.
 - **Shape:** 10px.
-- **Primary:** ube `accent` with `accent-ink`, 44px, 16px sides, weight 500. Hover `accent-hover`; press nudges down 1px; disabled is `line-strong` with white text.
+- **Primary:** cocoa `accent` with `accent-ink`, 44px, 16px sides, weight 500. Hover `accent-hover`; press nudges down 1px; disabled is `line-strong` with white text.
 - **Secondary:** white with a `line-strong` ring; hover fills `surface-2` and darkens the ring to `ink-3`.
 - **Ghost:** `ink-2`, no fill; hover `surface-2` and `ink`.
 - **Danger:** white, `rise` text, `line-strong` ring; hover `rise-wash` with a `rise` ring.
@@ -570,7 +573,7 @@ A Google Sheets look-alike on the scoped `.gsheet` colours.
 - **Cells:** the name column pinned in Bricolage 600 with an open-detail link (`ink-3`, hover `accent-wash`); category dot leads the Category cell; figures tabular and right-aligned.
 - **Locked Cost per unit:** on the Sheets header grey, semibold, lock in its header, hint "Worked out for you: price ÷ size".
 - **Low stock cell:** `low-wash` with a LOW pill.
-- **Selection:** a 2px Sheets-blue inset ring and the 7px fill handle; an open editor rings in ube `focus`; a failed save rings `rise`.
+- **Selection:** a 2px Sheets-blue inset ring and the 7px fill handle; an open editor rings in cocoa `focus`; a failed save rings `rise`.
 - **Sheet tabs:** one per category along the bottom; the active tab is white with Sheets-blue ink and a 3px blue underline.
 
 ### Ledger sheet (money lists)
@@ -602,16 +605,21 @@ An `accent-wash` band holds "Cost per [unit]" and the cost at Figure Large, the 
 - **Ingredients:** a white label with the recipe in Bake Title, `surface-2` chips for yield and time, a tabular amount list with Bricolage names; the current step's ingredients highlight on `accent-wash` with a `line-strong` ring.
 - **Step card:** white label, Bake Step type in a 28ch measure; a start-timer control on `accent-wash` that rings in `accent` on hover. The card slides 28px in from the direction of travel over 220ms.
 - **Progress:** 8px pill segments, done in `accent`, current on `accent-wash` with an `accent` inset ring, ahead in `line`.
-- **Timer pill:** 44px `shell-2` pill with a `shell-3` ring, tabular clock; a ringing pill flashes between ube and white once a second.
-- **Alarm:** a full ube banner flashing to white once a second, Bake Alarm type, and a 96px white Stop button with a 3px ring. Under reduced motion it holds still as white with a 6px ube inner edge.
-- **Back and Next:** a 56px bottom bar on a white strip; Next is the ube primary.
+- **Timer pill:** 44px `shell-2` pill with a `shell-3` ring, tabular clock; a ringing pill flashes between cocoa and white once a second.
+- **Alarm:** a full cocoa banner flashing to white once a second, Bake Alarm type, and a 96px white Stop button with a 3px ring. Under reduced motion it holds still as white with a 6px cocoa inner edge.
+- **Back and Next:** a 56px bottom bar on a white strip; Next is the cocoa primary.
 
 ### Cake design board (signature)
 - **Frame:** the full `shell`; title, linked order and save state on top.
 - **Board:** a 4:3 sheet of board paper with faint cake outlines, 10px corners and a `shell-3` ring; hints sit in a translucent shell pill at its foot.
 - **Tools:** 56px shell tools (10px, Caption labels, `shell-ink-2`, hover `shell-2`); the selected tool sits on a white 10px plate that glides between tools over 300ms, its icon in `accent` with a dot of the current icing colour; disabled at 40%.
 - **Icing swatches:** 48px round swatches in the named icing colours with a check on the selected one (latik check on light icings, white on dark), and a conic "more colours" picker. Swatch colours are content, never chrome.
-- **Gallery:** template and design tiles as white labels; designs attach to orders and appear in Bake mode.
+- **Gallery:** template and design tiles as white labels; designs attach to orders and appear in Bake mode. A design with more than one view shows its first view with the others as small 4:3 thumbnails in the corner, ringed in `surface`.
+- **Shapes (owner request, 2026-10-22):** round from above and the side, two and three tiers, sheet, square tiers, heart, drip (dark ganache by default, its own "Drip and top" part), bento box (kraft lunch box), number cakes 0 to 9 (one "Number cake" tile, then a digit), cupcakes, blank. Then seven **theme cakes** (Birthday, Unicorn, Princess, Dinosaur, Floral wedding, Baby shower, Christmas): ordinary views pre-built from the same piping and decor, so everything on them stays editable. Drawing material lives in `cake-art.tsx`, `themes.ts`.
+- **Views:** a design holds up to 8 views (a top view and a side view of one cake), each a full board with its own undo. Tabs sit in a translucent `shell` pill over the board's top-left corner: a round 4:3 thumbnail and a short name ("Top", "Side", "Heart 2"), the current tab on a white label, then "+ View". The first view is the row's own columns; the rest are `extra_views`. The order, Bake mode and Share picture show every view (the picture lays them out two across).
+- **The shape-change warning:** changing the shape of a view that has drawing on it never happens silently. The sheet turns into "Change to Heart cake?" with this view and the new shape side by side, and three answers: Cancel, **Replace and clear** (danger), **Add as a new view** (primary). Replacing has Undo in the toast and in the history.
+- **Piping tips:** sixteen tips, each tile carrying its Wilton number in a small `shell` badge (21 shell, 20 star, 1M rosette, 22 swirl, 12 pearl and heart, 2D drop flower, 104 rose and ruffle, 81 mini petals, 352 leaf, 124 ribbon swag, 6B rope, 21 zigzag, 48 basket weave, 233 grass).
+- **Decor:** a sixth tool (D) with a tray of 27 accessories in five groups (toppers and words, sweets, cartoons, shapes, holidays), drawn in the piping's flat layered tones in a 100-unit frame. Items marked tint wear the chosen icing colour; natural things keep theirs (a strawberry stays red). Sizes read Small, Medium, Large. Tap places; press and drag places exactly; dragging a placed item moves it; the Eraser removes it. Words are piped in Dancing Script 700 (`cakeScript` in `src/lib/fonts.ts`, no preload) with greeting chips (a datalist on narrow phones); number candles letter in Bricolage 800. Share picture embeds both faces so the PNG matches the board.
 
 ### Report charts
 Rank bars in `chart-bar` with the value at the bar end and a reserved right gutter; scatter dots in `series-1` with a `surface` stroke and median quadrants named in Caption; tooltips are white 10px labels with a `line` ring and the Sheet shadow.
@@ -624,21 +632,21 @@ Rank bars in `chart-bar` with the value at the bar end and a reserved right gutt
 Rows with a 44px hit area around a 22px, 6px-radius checkbox (white with a 1.5px `line-strong` ring, solid `accent` with a check when done) and a Caption meta line; late reads "N days late" in semibold `rise`.
 
 ### Navigation
-- **Desktop rail:** 240px pale pandan column with the mark and wordmark, 36px items in `shell-ink-2` under small `shell-ink-2` group names; hover `shell-2` with `shell-ink`. The active item is a white 10px label with a `shell-3` ring, `ink` text and its icon in ube duotone.
-- **Phone tab bar:** five 64px tabs with icon and Micro label; the active icon sits in a white 28x56 pill in ube duotone.
+- **Desktop rail:** 240px pale pandan column with the logo lockup (mark plus stacked "Kin / Kitchen" in cocoa), 36px items in `shell-ink-2` under small `shell-ink-2` group names; hover `shell-2` with `shell-ink`. The active item is a white 10px label with a `shell-3` ring, `ink` text and its icon in cocoa duotone.
+- **Phone tab bar:** five 64px tabs with icon and Micro label; the active icon sits in a white 28x56 pill in cocoa duotone.
 - **Pending feedback:** a tapped nav item tints with 16% `shell-ink` after 80ms, and a 3px `focus` bar with a soft glow runs across the top of the screen; hidden for the first 120ms so fast navigations do not flicker. Under reduced motion the bar holds at 60% instead of running.
 - **More page:** the rail's groups as white list labels, each row a 40px `accent-wash` icon tile, the name and an `ink-2` blurb.
 - **Floating add:** a 56px `accent` pill with a plus and a label naming what that list collects (Order, Add, Recipe, Income, Expense, Task, Design), Sheet shadow; absent elsewhere.
 
 ### Manual (/guide)
-A reading page: Headline title, a 1.0625rem intro, a sticky chapter list whose current chapter shows its icon in ube duotone, and body copy in a 68ch measure. Inline code and keyboard keys are 5px chips (keys white with a `line-strong` ring and a 2px `line` underside).
+A reading page: Headline title, a 1.0625rem intro, a sticky chapter list whose current chapter shows its icon in cocoa duotone, and body copy in a 68ch measure. Inline code and keyboard keys are 5px chips (keys white with a `line-strong` ring and a 2px `line` underside).
 
 ### Sheets and toasts
 - **Sheet:** white with the Sheet shadow, a 56px header and a hairline sticky footer; full height or 14px top-rounded on phones, centred with 10px corners on desktop; enters with a 24px rise over 260ms.
 - **Toast:** a pandan `shell` bar, 10px, Sheet shadow, with an Undo action (5px, hover `shell-3`) and a dismiss; errors in `rise-on-shell`; enters with a 12px rise over 220ms.
 
 ### Canister (signature)
-The stock gauge on ingredient detail at 64x84 beside the stock figure, and at 26x34 in Today's Running low list. The pandan fill rises to the stock level (full is three times the low level); at or below the dashed low-line it turns yema and the line turns `low-ink`. Fill changes animate over 420ms; reduced motion turns that off.
+The stock gauge on ingredient detail at 64x84 beside the stock figure, and at 26x34 in Today's To buy list. The pandan fill rises to the stock level (full is three times the low level); at or below the dashed low-line it turns yema and the line turns `low-ink`. Fill changes animate over 420ms; reduced motion turns that off.
 
 ### Price history
 A card of history labels, newest first, each with date, cost per unit and a change tag, ending in a `surface-2` footer. A fresh label slides in from 10px above, fading from `accent-wash` over 420ms.
@@ -648,7 +656,7 @@ A card of history labels, newest first, each with date, cost per unit and a chan
 ### Do:
 - **Do** keep the app always light: buko `ground`, white `surface` labels, latik `ink`.
 - **Do** frame the app in the pale pandan shell (rail, tab bar, toasts, Bake and board frames) separated by a `shell-3` hairline, never by a dark band.
-- **Do** use ube `accent` for every action and `focus` for every focus ring.
+- **Do** use cocoa `accent` for every action and `focus` for every focus ring.
 - **Do** import icons only from the Phosphor vocabulary module: regular by default, bold for emphasis, duotone for the selected nav item.
 - **Do** keep kakanin colours in data: the five series in fixed order, the category legend, the icing palette.
 - **Do** keep computed values locked behind a lock on a recessed tint, never editable, with a link to their source.

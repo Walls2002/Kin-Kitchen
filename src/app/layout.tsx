@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, Geist } from "next/font/google";
+import { Geist, Montserrat } from "next/font/google";
+import { bricolage } from "@/lib/fonts";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist", display: "swap" });
-const bricolage = Bricolage_Grotesque({ subsets: ["latin"], variable: "--font-bricolage", display: "swap" });
+// The logo's lettering, used only for the wordmark beside the mark.
+const montserrat = Montserrat({ subsets: ["latin"], weight: "500", variable: "--font-montserrat", display: "swap" });
 
 export const metadata: Metadata = {
   title: { default: "Kin Kitchen", template: "%s · Kin Kitchen" },
@@ -29,7 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     // Browser extensions (Grammarly, password managers, dark-mode tools) stamp attributes onto
     // <html> and <body> before React loads; this ignores attribute mismatches on these two tags only.
-    <html lang="en-PH" className={`${geist.variable} ${bricolage.variable}`} suppressHydrationWarning>
+    <html lang="en-PH" className={`${geist.variable} ${bricolage.variable} ${montserrat.variable}`} suppressHydrationWarning>
       <body suppressHydrationWarning>{children}</body>
     </html>
   );

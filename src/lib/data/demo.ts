@@ -122,7 +122,7 @@ function seed(): Store {
 }
 
 /** Bump when the sample data changes so a running dev server re-seeds. */
-const SEED_VERSION = 15;
+const SEED_VERSION = 16;
 const g = globalThis as unknown as { __kinDemo?: Store };
 
 /**
@@ -144,6 +144,7 @@ function heal(s: Store): Store {
     k.strokes ??= [];
     k.surface ??= null;
     k.layers ??= {};
+    k.extra_views ??= [];
   }
   return s;
 }

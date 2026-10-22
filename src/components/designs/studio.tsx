@@ -52,11 +52,12 @@ export function DesignStudio({ sketches, orders }: { sketches: Sketch[]; orders:
         strokes: [],
         surface: null,
         layers: {},
+        extra_views: [],
         notes: null,
       };
     }
     const s = sketches.find((x) => x.id === sessionKey);
-    return s ? { id: s.id, title: s.title, order_id: s.order_id, template: s.template, strokes: s.strokes, surface: s.surface ?? null, layers: s.layers ?? {}, notes: s.notes } : null;
+    return s ? { id: s.id, title: s.title, order_id: s.order_id, template: s.template, strokes: s.strokes, surface: s.surface ?? null, layers: s.layers ?? {}, extra_views: s.extra_views ?? [], notes: s.notes } : null;
   }, [sessionKey]);
 
   const options = useMemo(
