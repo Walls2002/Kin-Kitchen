@@ -44,6 +44,21 @@ const LIST_COLUMNS: Record<string, string[]> = {
   sketches: ["strokes", "extra_views"],
 };
 
+/**
+ * Columns a later migration adds. Until that migration is run, a write that
+ * includes one is retried without it, so saving never breaks on an old database.
+ * (recipes.utilities: 0007; overhead_cost still carries their total.)
+ */
+const LATER_COLUMNS: Record<string, string[]> = {
+  recipes: ["utilities"],
+};
+
+/** The later column a failed write names as missing, if any. */
+function missingLaterColumn(name: string, error: PostgrestError | null): string | undefined {
+  if (!error || (error.code !== "42703" && error.code !== "PGRST204")) return undefined;
+  return LATER_COLUMNS[name]?.find((c) => error.message.includes(`'${c}'`) || error.message.includes(`.${c} `) || error.message.includes(`"${c}"`));
+}
+
 const DUPLICATE: Record<string, string> = {
   recipes: "There's already a product with that name",
   dashboard_views: "There's already a view with that name",
@@ -65,6 +80,18 @@ function table<T, I>(db: Db, name: string, order: { column: string; ascending: b
     if (error?.code === "23505" && DUPLICATE[name]) throw new RepoError(DUPLICATE[name], "name");
     fail(error);
   };
+  /** Runs a write; if the database lacks a later column, runs it again without that column. */
+  const write = async (input: object, run: (row: object) => PromiseLike<{ data: unknown; error: PostgrestError | null }>) => {
+    let res = await run(input);
+    const missing = missingLaterColumn(name, res.error);
+    if (missing) {
+      console.warn(`[kin-kitchen] ${name}.${missing} is missing; run the migration that adds it. Saved without it.`);
+      const { [missing]: _dropped, ...rest } = input as Record<string, unknown>;
+      res = await run(rest);
+    }
+    check(res.error);
+    return norm(res.data);
+  };
   return {
     async list() {
       const { data, error } = await db.from(name).select("*").order(order.column, { ascending: order.ascending });
@@ -77,19 +104,13 @@ function table<T, I>(db: Db, name: string, order: { column: string; ascending: b
       return data ? norm(data) : null;
     },
     async create(input) {
-      const { data, error } = await db.from(name).insert(input as object).select("*").single();
-      check(error);
-      return norm(data);
+      return write(input as object, (row) => db.from(name).insert(row).select("*").single());
     },
     async update(id, patch) {
-      const { data, error } = await db.from(name).update(patch as object).eq("id", id).select("*").single();
-      check(error);
-      return norm(data);
+      return write(patch as object, (row) => db.from(name).update(row).eq("id", id).select("*").single());
     },
     async restore(row) {
-      const { data, error } = await db.from(name).upsert(row as object).select("*").single();
-      check(error);
-      return norm(data);
+      return write(row as object, (r) => db.from(name).upsert(r).select("*").single());
     },
     async remove(id) {
       check((await db.from(name).delete().eq("id", id)).error);

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, ChefHat, ChevronsUpDown, Lock, Plus, Search, TriangleAlert, X } from "@/components/icons";
+import { ArrowDown, ArrowUp, ChefHat, ChevronsUpDown, Lock, Search, TriangleAlert, X } from "@/components/icons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -326,12 +326,7 @@ export function RecipesSheet({ recipes, ingredients }: { recipes: Recipe[]; ingr
         </table>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm">
-        <span className="text-ink-2">Cost per unit is batch cost (ingredients, labor, utilities) divided by how many units a batch makes.</span>
-        <ButtonLink href="/recipes/new" variant="secondary">
-          <Plus aria-hidden /> Add a recipe
-        </ButtonLink>
-      </div>
+      <p className="mt-3 text-sm text-ink-2">Cost per unit is batch cost (ingredients, labor, utilities) divided by how many units a batch makes.</p>
     </>
   );
 }

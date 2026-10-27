@@ -144,6 +144,18 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string>();
+  const formRef = useRef<HTMLFormElement>(null);
+  const [reveal, setReveal] = useState(0);
+  // After a failed save renders its errors, bring the first one into view.
+  useEffect(() => {
+    if (!reveal) return;
+    const raf = requestAnimationFrame(() => {
+      const el = formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"], [role="alert"]');
+      el?.scrollIntoView({ block: "center", behavior: "smooth" });
+      if (el?.matches("input, textarea, select")) el.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [reveal]);
   const [quoteQty, setQuoteQty] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const amountRefs = useRef(new Map<string, HTMLInputElement>());
@@ -226,6 +238,21 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
 
   /* ---------- save and delete ---------- */
 
+  /**
+   * A save that can't go through says so where the owner is looking, not only at the foot of
+   * the form: a toast, then a scroll to the field at fault. From Start baking, the toast offers
+   * to bake the last saved version instead, so the button never seems dead.
+   */
+  const showFailure = (message: string, baking: boolean) => {
+    setFormError(message);
+    setReveal((n) => n + 1);
+    toast({
+      message: baking ? `Couldn't save, so baking didn't start. ${message}` : message,
+      tone: "error",
+      action: baking && recipe ? { label: "Bake anyway", onAction: () => router.push(`/bake/${recipe.id}`) } : undefined,
+    });
+  };
+
   const submit = (e?: React.FormEvent, after?: () => void) => {
     e?.preventDefault();
     setFormError(undefined);
@@ -236,12 +263,13 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
     const result = recipeSchema.safeParse(payload);
     if (!result.success || lineError || stepError >= 0) {
       setErrors(result.success ? {} : fieldErrors(result.error));
-      setFormError(
+      showFailure(
         lineError
           ? `Check the amount for ${lineError.ing?.name ?? "an ingredient"}: ${(lineError.error ?? "").toLowerCase()}.`
           : stepError >= 0
             ? `Check step ${stepError + 1} in Method: ${(Object.values(checkStep(steps[stepError]))[0] ?? "").toLowerCase()}.`
             : "Some fields need attention.",
+        !!after,
       );
       return;
     }
@@ -249,7 +277,7 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
       const res = await saveRecipe(recipe?.id ?? null, result.data);
       if (!res.ok) {
         setErrors(res.fieldErrors ?? {});
-        setFormError(res.error);
+        showFailure(res.error, !!after);
         return;
       }
       setBaseline(snapshot);
@@ -292,7 +320,7 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
   const yieldN = orZero(payload.yield_qty);
 
   return (
-    <form onSubmit={submit} noValidate>
+    <form ref={formRef} onSubmit={submit} noValidate>
       <Link href="/recipes" className="-ml-2 inline-flex h-11 items-center gap-1.5 rounded-[var(--radius-surface)] px-2 text-sm font-medium text-ink-2 hover:text-ink lg:h-9">
         <ArrowLeft className="size-4" aria-hidden />
         Recipe pricing
