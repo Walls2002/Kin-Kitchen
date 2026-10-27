@@ -66,6 +66,13 @@ export interface RecipeStep {
   minutes: number | null;
 }
 
+export interface RecipeUtility {
+  /** Electricity, Water, Gas (LPG)... */
+  name: string;
+  /** Pesos per batch. */
+  cost: number;
+}
+
 export interface Recipe {
   id: string;
   name: string;
@@ -79,8 +86,10 @@ export interface Recipe {
   price: number;
   /** Per batch. */
   labor_cost: number;
-  /** Per batch: gas, electricity, wear. */
+  /** Per batch: the total of `utilities`. Order costs and reports read this. */
   overhead_cost: number;
+  /** Per batch, itemized: electricity, water, gas... */
+  utilities: RecipeUtility[];
   /** Profit the owner aims for, as a percent of the cost (markup): 50 means price = cost × 1.5. */
   target_margin: number;
   lines: RecipeLine[];

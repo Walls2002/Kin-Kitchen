@@ -29,7 +29,7 @@ const COLS: {
     width: 140,
     align: "right",
     locked: true,
-    hint: "Worked out for you from today's ingredient prices, labor and overhead",
+    hint: "Worked out for you from today's ingredient prices, labor and utilities",
   },
   {
     key: "profit",
@@ -119,7 +119,7 @@ export function RecipesSheet({ recipes, ingredients }: { recipes: Recipe[]; ingr
       <div className="surface mt-6 max-w-xl px-6 py-7">
         <h2 className="text-lg font-semibold tracking-tight">No recipes yet</h2>
         <p className="mt-2 text-ink-2">
-          Add a product with the ingredients one batch uses. Kin Kitchen prices each line from your pantry, adds labor and overhead, and shows the cost of every unit you
+          Add a product with the ingredients one batch uses. Kin Kitchen prices each line from your pantry, adds labor and utilities (electricity, water, gas), and shows the cost of every unit you
           sell.
         </p>
         <ButtonLink href="/recipes/new" variant="primary" className="mt-5">
@@ -327,7 +327,7 @@ export function RecipesSheet({ recipes, ingredients }: { recipes: Recipe[]; ingr
       </div>
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm">
-        <span className="text-ink-2">Cost per unit is batch cost (ingredients, labor, overhead) divided by how many units a batch makes.</span>
+        <span className="text-ink-2">Cost per unit is batch cost (ingredients, labor, utilities) divided by how many units a batch makes.</span>
         <ButtonLink href="/recipes/new" variant="secondary">
           <Plus aria-hidden /> Add a recipe
         </ButtonLink>

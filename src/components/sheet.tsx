@@ -41,9 +41,6 @@ export function Sheet({
         e.preventDefault();
         onClose();
       }}
-      onClick={(e) => {
-        if (e.target === ref.current) onClose();
-      }}
       aria-labelledby={undefined}
       aria-label={title}
       className={cx(

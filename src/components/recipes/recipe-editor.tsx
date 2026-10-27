@@ -59,6 +59,14 @@ const stepMinutes = (m: string) => (m.trim() === "" ? null : Number(m.trim().rep
 /** Blank cards (no text, no timer) are dropped on save instead of blocking it. */
 const isBlankStep = (s: StepState) => !s.text.trim() && !s.minutes.trim();
 
+interface UtilityState {
+  key: string;
+  name: string;
+  cost: string;
+}
+
+const UTILITY_PRESETS = ["Electricity", "Water", "Gas (LPG)"];
+
 const num = (s: string) => (s.trim() === "" ? NaN : Number(s.replace(/[₱,\s]/g, "")));
 const show = (n: number) => (Number.isFinite(n) ? String(Math.round(n * 1000) / 1000) : "");
 const orZero = (n: number) => (Number.isFinite(n) ? n : 0);
@@ -79,6 +87,7 @@ export function toRecipeInput(r: Recipe): RecipeInput {
     price: r.price,
     labor_cost: r.labor_cost,
     overhead_cost: r.overhead_cost,
+    utilities: r.utilities ?? [],
     target_margin: r.target_margin,
     lines: r.lines.map((l) => ({ ingredient_id: l.ingredient_id, qty: l.qty })),
     steps: (r.steps ?? []).map((s) => ({ text: s.text, minutes: s.minutes })),
@@ -101,7 +110,6 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
     yield_label: recipe?.yield_label ?? "pc",
     price: recipe ? show(recipe.price) : "",
     labor_cost: recipe ? show(recipe.labor_cost) : "",
-    overhead_cost: recipe ? show(recipe.overhead_cost) : "",
     target_margin: recipe ? show(recipe.target_margin) : "50",
     notes: recipe?.notes ?? "",
     active: recipe?.active ?? true,
@@ -123,6 +131,16 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
   );
   const [steps, setSteps] = useState<StepState[]>(() =>
     (recipe?.steps ?? []).map((s: RecipeStep, n) => ({ key: `t${n}`, text: s.text, minutes: s.minutes ? String(s.minutes) : "", touched: false })),
+  );
+  // A recipe saved before utilities were itemized shows its overhead as one line.
+  const [utilities, setUtilities] = useState<UtilityState[]>(() =>
+    recipe?.utilities?.length
+      ? recipe.utilities.map((u, n) => ({ key: `u${n}`, name: u.name, cost: show(u.cost) }))
+      : recipe
+        ? recipe.overhead_cost > 0
+          ? [{ key: "u0", name: "Overhead", cost: show(recipe.overhead_cost) }]
+          : []
+        : UTILITY_PRESETS.map((name, n) => ({ key: `u${n}`, name, cost: "" })),
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string>();
@@ -157,6 +175,9 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
     return { line: l, ing, qty: p.value, error: undefined };
   });
 
+  // Lines with no amount are left out, so the starter Electricity / Water / Gas rows never block a save.
+  const utilityItems = utilities.filter((u) => u.cost.trim() !== "").map((u) => ({ name: u.name.trim(), cost: num(u.cost) }));
+
   const payload: RecipeInput = {
     name: v.name,
     group: v.group,
@@ -164,7 +185,8 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
     yield_label: v.yield_label,
     price: num(v.price),
     labor_cost: v.labor_cost.trim() === "" ? 0 : num(v.labor_cost),
-    overhead_cost: v.overhead_cost.trim() === "" ? 0 : num(v.overhead_cost),
+    overhead_cost: utilityItems.reduce((s, u) => s + orZero(u.cost), 0),
+    utilities: utilityItems,
     target_margin: num(v.target_margin),
     lines: parsed.map((p) => ({ ingredient_id: p.line.ingredient_id, qty: p.qty })),
     steps: steps.filter((s) => !isBlankStep(s)).map((s) => ({ text: s.text.trim(), minutes: stepMinutes(s.minutes) })),
@@ -504,13 +526,19 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
                   </span>
                 )}
               </Field>
-              <Field label="Labor per batch" error={errors.labor_cost} hint="What your time or a helper costs">
+              <Field label="Labor per batch" error={errors.labor_cost} hint="What your time or a helper costs" className="col-span-2 sm:col-span-1">
                 {(p) => <PesoInput {...p} value={v.labor_cost} onChange={(labor_cost) => set({ labor_cost })} />}
               </Field>
-              <Field label="Overhead per batch" error={errors.overhead_cost} hint="Gas, electricity, wear">
-                {(p) => <PesoInput {...p} value={v.overhead_cost} onChange={(overhead_cost) => set({ overhead_cost })} />}
-              </Field>
             </div>
+            <UtilitiesEditor
+              utilities={utilities}
+              setUtilities={(next) => {
+                setUtilities(next);
+                setErrors((e) => ({ ...e, utilities: "" }));
+              }}
+              total={cost.overhead}
+              error={errors.utilities}
+            />
           </section>
 
           <section className="surface p-4 sm:p-5">
@@ -713,6 +741,93 @@ function MethodEditor({ steps, setSteps }: { steps: StepState[]; setSteps: React
   );
 }
 
+/* ---------- utilities: electricity, water, gas per batch ---------- */
+
+function UtilitiesEditor({
+  utilities,
+  setUtilities,
+  total,
+  error,
+}: {
+  utilities: UtilityState[];
+  setUtilities: (fn: (us: UtilityState[]) => UtilityState[]) => void;
+  total: number;
+  error?: string;
+}) {
+  const ids = useId();
+  const seq = useRef(0);
+  const [focusId, setFocusId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!focusId) return;
+    document.getElementById(focusId)?.focus();
+    setFocusId(null);
+  }, [focusId]);
+
+  const add = (name: string) => {
+    const key = `n${seq.current++}`;
+    setUtilities((us) => [...us, { key, name, cost: "" }]);
+    setFocusId(name ? `${ids}-cost-${key}` : `${ids}-name-${key}`);
+  };
+  const patch = (key: string, p: Partial<UtilityState>) => setUtilities((us) => us.map((u) => (u.key === key ? { ...u, ...p } : u)));
+  const remove = (key: string) => setUtilities((us) => us.filter((u) => u.key !== key));
+
+  const have = new Set(utilities.map((u) => u.name.trim().toLowerCase()));
+  const presets = UTILITY_PRESETS.filter((p) => !have.has(p.toLowerCase()));
+
+  return (
+    <div className="sep-t mt-5 pt-4" role="group" aria-labelledby={`${ids}-t`}>
+      <div className="flex items-baseline justify-between gap-3">
+        <p id={`${ids}-t`} className="text-sm font-medium">
+          Utilities per batch
+        </p>
+        <span className="figures text-sm font-semibold">{formatPeso(total)}</span>
+      </div>
+      <p className="mt-0.5 text-xs text-ink-2">Electricity, water and gas one batch uses. Rough is fine: a 2 kW oven running 30 minutes uses about 1 kWh.</p>
+
+      {utilities.length ? (
+        <ul className="mt-3 flex flex-col gap-2">
+          {utilities.map((u) => {
+            const label = u.name.trim() || "Utility";
+            return (
+              <li key={u.key} className="grid grid-cols-[minmax(0,1fr)_7.5rem_2.75rem] items-center gap-2 sm:grid-cols-[minmax(0,1fr)_9rem_2.75rem]">
+                <Input
+                  id={`${ids}-name-${u.key}`}
+                  aria-label="Utility name"
+                  value={u.name}
+                  onChange={(e) => patch(u.key, { name: e.target.value })}
+                  placeholder="e.g. Oven rental"
+                  autoComplete="off"
+                />
+                <PesoInput id={`${ids}-cost-${u.key}`} aria-label={`${label} per batch`} value={u.cost} onChange={(cost) => patch(u.key, { cost })} />
+                <button
+                  type="button"
+                  onClick={() => remove(u.key)}
+                  aria-label={`Remove ${label}`}
+                  className="grid size-11 place-items-center rounded-[var(--radius-surface)] text-ink-3 hover:bg-surface-2 hover:text-rise"
+                >
+                  <X className="size-4" aria-hidden />
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {presets.map((p) => (
+          <Button key={p} size="sm" onClick={() => add(p)}>
+            <Plus aria-hidden /> {p}
+          </Button>
+        ))}
+        <Button size="sm" variant="ghost" onClick={() => add("")}>
+          <Plus aria-hidden /> Other
+        </Button>
+      </div>
+      {error ? <p className="mt-2 text-xs font-medium text-rise">{error}</p> : null}
+    </div>
+  );
+}
+
 /** Fit a textarea to its text so a long step never hides behind a scrollbar. */
 function grow(el: HTMLTextAreaElement) {
   el.style.height = "auto";
@@ -741,7 +856,7 @@ function PriceLabel({
   const parts = [
     { label: "Ingredients", value: cost.ingredients },
     { label: "Labor", value: cost.labor },
-    { label: "Overhead", value: cost.overhead },
+    { label: "Utilities", value: cost.overhead },
   ];
   const under = cost.markup !== null && cost.markup < target - 0.05;
   const suggestedIsSet = cost.suggestedPrice > 0 && Math.abs(cost.suggestedPrice - price) < 0.005;

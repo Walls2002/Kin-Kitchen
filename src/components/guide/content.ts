@@ -229,7 +229,7 @@ export const CHAPTERS: Chapter[] = [
           "Under Product, give it a **Name**, then fill in **One batch makes** (for example 12) and **One unit is called** (pc, box of 12, whole cake).",
           "Under Ingredients for one batch, type into \"Add an item: search the pantry\". Pick with [[↑]] [[↓]] and [[Enter]], or tap it.",
           "The cursor jumps to the amount. Type it like 250 g, 1.5 kg or 3 pc.",
-          "Under Price and running costs, fill in **Selling price**, **Profit on cost** (it starts at 50%, so the price is the cost plus half), **Labor per batch** and **Overhead per batch** (gas, electricity, wear).",
+          "Under Price and running costs, fill in **Selling price**, **Profit on cost** (it starts at 50%, so the price is the cost plus half), **Labor per batch** and **Utilities per batch**: what one batch spends on electricity, water and gas (tap **+ Other** for anything else).",
           "Watch the price label: cost per unit, batch cost, profit and profit on cost update as you type. **Suggested price** is your cost plus your **Profit on cost** (50% means cost × 1.5), rounded up to the next ₱5; tap **Use this price** to take it.",
           "Tap **Add recipe** to save it, or **Save recipe** after changes.",
         ],

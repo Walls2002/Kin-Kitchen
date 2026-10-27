@@ -598,7 +598,7 @@ One white label holding three or four figures split by hairlines; two columns on
 White label panels; money lines with right-aligned tabular amounts; subtotals semibold over a `line` rule; grand totals add the double rule. Computed lines (inventory, receivables, tax payable, net income) are 6px `surface-2` blocks with a lock, a note and an `accent` link to their source. An unmatched balance shows as its own "Not yet matched" computed line.
 
 ### Recipe price label (signature)
-An `accent-wash` band holds "Cost per [unit]" and the cost at Figure Large, the one large figure, with batch cost ÷ yield in Caption. Below, a 10px pill bar splits the batch cost into ingredients, labour and overhead in `series-1` to `series-3` with 2px gaps, over a dot legend.
+An `accent-wash` band holds "Cost per [unit]" and the cost at Figure Large, the one large figure, with batch cost ÷ yield in Caption. Below, a 10px pill bar splits the batch cost into ingredients, labour and utilities in `series-1` to `series-3` with 2px gaps, over a dot legend.
 
 ### Bake mode (signature)
 - **Frame:** the full `shell`; top bar of 48px shell buttons hovering `shell-2`, recipe name, step count, a screen-on mark, and running timer pills.

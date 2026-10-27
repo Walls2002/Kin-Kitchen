@@ -69,6 +69,10 @@ export const recipeSchema = z.object({
   price: peso("selling price"),
   labor_cost: peso("labor cost"),
   overhead_cost: peso("overhead cost"),
+  utilities: z
+    .array(z.object({ name: z.string().trim().min(1, "Name each utility, like Electricity").max(40, "Keep a utility name under 40 characters"), cost: peso("utility cost") }))
+    .max(20, "Keep a recipe under 20 utilities")
+    .default([]),
   target_margin: z.number({ error: "Enter your profit on cost" }).min(0, "Profit can't be negative").max(1000, "Keep the profit on cost at 1000% or less"),
   lines: z
     .array(z.object({ ingredient_id: z.string().min(1), qty: positive("amount") }))

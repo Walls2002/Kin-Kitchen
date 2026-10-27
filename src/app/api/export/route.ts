@@ -80,8 +80,8 @@ export async function GET(request: Request) {
     const recipes = await repo.recipes.list();
     const ingName = new Map(ingredients.map((i) => [i.id, i]));
     body = csv(
-      ["product", "group", "yield_qty", "yield_label", "price_php", "labor_php", "overhead_php", "target_profit_on_cost_pct", "ingredients"],
-      recipes.map((r) => [r.name, r.group, r.yield_qty, r.yield_label, r.price, r.labor_cost, r.overhead_cost, r.target_margin, r.lines.map((l) => `${ingName.get(l.ingredient_id)?.name ?? "?"} ${l.qty} ${ingName.get(l.ingredient_id)?.unit ?? ""}`).join("; ")]),
+      ["product", "group", "yield_qty", "yield_label", "price_php", "labor_php", "overhead_php", "utilities", "target_profit_on_cost_pct", "ingredients"],
+      recipes.map((r) => [r.name, r.group, r.yield_qty, r.yield_label, r.price, r.labor_cost, r.overhead_cost, (r.utilities ?? []).map((u) => `${u.name} ${u.cost}`).join("; "), r.target_margin,r.lines.map((l) => `${ingName.get(l.ingredient_id)?.name ?? "?"} ${l.qty} ${ingName.get(l.ingredient_id)?.unit ?? ""}`).join("; ")]),
     );
     name = `kin-kitchen-recipes-${date}.csv`;
   } else if (type === "tax") {

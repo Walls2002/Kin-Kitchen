@@ -26,6 +26,7 @@ import type {
   PaymentMethod,
   Recipe,
   RecipeStep,
+  RecipeUtility,
   Sketch,
   Stroke,
   Task,
@@ -93,6 +94,17 @@ interface RecipeSeed {
   notes?: string;
   weight: number;
 }
+
+/** A seed's overhead as itemized utilities, mostly oven power and LPG. */
+const utilitySplit = (total: number): RecipeUtility[] => {
+  const electricity = Math.round(total * 0.5);
+  const gas = Math.round(total * 0.35);
+  return [
+    { name: "Electricity", cost: electricity },
+    { name: "Gas (LPG)", cost: gas },
+    { name: "Water", cost: total - electricity - gas },
+  ];
+};
 
 const RECIPES: RecipeSeed[] = [
   {
@@ -248,6 +260,7 @@ export function seedBusiness(ingredients: Ingredient[], history: PriceEntry[], n
     price: s.price,
     labor_cost: s.labor,
     overhead_cost: s.overhead,
+    utilities: utilitySplit(s.overhead),
     target_margin: s.target,
     lines: s.lines.filter(([n]) => ing.has(n)).map(([n, qty]) => ({ ingredient_id: ing.get(n)!.id, qty })),
     steps: s.steps.map(([text, minutes]): RecipeStep => ({ text, minutes })),

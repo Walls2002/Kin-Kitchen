@@ -50,9 +50,11 @@ function parse<S extends z.ZodType>(schema: S, raw: unknown): { ok: true; data: 
 export async function saveRecipe(id: string | null, raw: unknown): Promise<ActionResult<Recipe>> {
   const p = parse(recipeSchema, raw);
   if (!p.ok) return p.result;
+  // Itemized utilities are the overhead; a recipe without them keeps its single overhead figure.
+  const data = p.data.utilities.length ? { ...p.data, overhead_cost: p.data.utilities.reduce((s, u) => s + u.cost, 0) } : p.data;
   return run(async () => {
     const repo = await getRepo();
-    return id ? repo.recipes.update(id, p.data) : repo.recipes.create(p.data);
+    return id ? repo.recipes.update(id, data) : repo.recipes.create(data);
   });
 }
 

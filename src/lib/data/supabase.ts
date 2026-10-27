@@ -39,7 +39,7 @@ const TABLE_NUMERIC: Record<string, string[]> = {
 
 /** jsonb list columns per table; always arrays in the app. */
 const LIST_COLUMNS: Record<string, string[]> = {
-  recipes: ["lines", "steps"],
+  recipes: ["lines", "steps", "utilities"],
   orders: ["items", "payments"],
   sketches: ["strokes", "extra_views"],
 };
