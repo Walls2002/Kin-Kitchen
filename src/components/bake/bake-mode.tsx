@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, BellRing, Check, ChefHat, Palette, Pause, Play, RotateCcw, Timer, X } from "@/components/icons";
+import { ArrowLeft, ArrowRight, BellRing, Check, ChefHat, ExternalLink, Palette, Pause, Play, RotateCcw, Timer, Video, X } from "@/components/icons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -370,6 +370,18 @@ export function BakeMode({
               Design
             </button>
           ) : null}
+          {recipe.video_url ? (
+            <a
+              href={recipe.video_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Watch the video (opens in a new tab)"
+              className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-shell-2 px-3.5 text-base font-medium text-shell-ink shadow-[inset_0_0_0_1px_var(--shell-3)] hover:bg-shell-3 max-sm:w-11 max-sm:justify-center max-sm:px-0"
+            >
+              <Video className="size-[18px]" aria-hidden />
+              <span className="max-sm:hidden">Video</span>
+            </a>
+          ) : null}
           <WakeMark state={wake} />
         </div>
         <TimerTray timers={timers} now={now} onToggle={toggleTimer} onCancel={cancelTimer} onOpen={(i) => stopRinging(i)} className="mt-2 flex landscape:sm:hidden [@media(orientation:landscape)_and_(max-height:520px)]:hidden" />
@@ -588,6 +600,11 @@ const bar = (extra: string) => cx("h-14! min-w-0 text-lg! [&_svg]:size-5!", extr
 
 /* ---------- get ready ---------- */
 
+/** "youtube.com" for a video link, so the owner sees where it goes before tapping. */
+function linkHost(url: string) {
+  return URL.canParse(url) ? new URL(url).hostname.replace(/^(www|m)\./, "") : url;
+}
+
 function ReadyCard({
   recipe,
   makes,
@@ -675,6 +692,23 @@ function ReadyCard({
             ))}
           </ol>
         </section>
+      ) : null}
+
+      {recipe.video_url ? (
+        <a
+          href={recipe.video_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-5 flex max-w-[60ch] items-center gap-3 rounded-[var(--radius-surface)] bg-surface-2 px-4 py-3 shadow-[inset_0_0_0_1px_var(--line)] hover:bg-accent-wash"
+        >
+          <Video className="size-6 shrink-0 text-accent" aria-hidden />
+          <span className="min-w-0 flex-1">
+            <span className="block text-md font-semibold">Watch the video</span>
+            <span className="block truncate text-base text-ink-2">{linkHost(recipe.video_url)}</span>
+          </span>
+          <ExternalLink className="size-5 shrink-0 text-ink-2" aria-hidden />
+          <span className="sr-only">(opens in a new tab)</span>
+        </a>
       ) : null}
 
       {recipe.notes ? (

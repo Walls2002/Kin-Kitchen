@@ -264,6 +264,7 @@ export function seedBusiness(ingredients: Ingredient[], history: PriceEntry[], n
     target_margin: s.target,
     lines: s.lines.filter(([n]) => ing.has(n)).map(([n, qty]) => ({ ingredient_id: ing.get(n)!.id, qty })),
     steps: s.steps.map(([text, minutes]): RecipeStep => ({ text, minutes })),
+    video_url: null,
     active: true,
     notes: s.notes ?? null,
     created_at: stamp(`${year - 1}-0${(i % 8) + 1}-1${i % 9}`),

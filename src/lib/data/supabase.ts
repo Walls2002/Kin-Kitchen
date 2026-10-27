@@ -47,10 +47,10 @@ const LIST_COLUMNS: Record<string, string[]> = {
 /**
  * Columns a later migration adds. Until that migration is run, a write that
  * includes one is retried without it, so saving never breaks on an old database.
- * (recipes.utilities: 0007; overhead_cost still carries their total.)
+ * (recipes.utilities: 0007; overhead_cost still carries their total. recipes.video_url: 0008.)
  */
 const LATER_COLUMNS: Record<string, string[]> = {
-  recipes: ["utilities"],
+  recipes: ["utilities", "video_url"],
 };
 
 /** The later column a failed write names as missing, if any. */

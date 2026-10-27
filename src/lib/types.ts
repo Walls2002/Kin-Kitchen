@@ -95,6 +95,8 @@ export interface Recipe {
   lines: RecipeLine[];
   /** Method, in order. Bake mode walks through these. */
   steps: RecipeStep[];
+  /** A reference video (YouTube or any web link), opened from Bake mode. */
+  video_url: string | null;
   active: boolean;
   notes: string | null;
   created_at: string;

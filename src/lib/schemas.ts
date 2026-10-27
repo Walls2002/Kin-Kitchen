@@ -53,6 +53,19 @@ export const fieldErrors = (error: z.ZodError) => {
 
 /* ---------- business ---------- */
 
+/**
+ * A pasted web address as a link that opens outside the app, or null when it isn't one.
+ * "youtu.be/abc" gets https:// so it never resolves as a path inside the app.
+ */
+export function webLink(raw: string): string | null {
+  const v = raw.trim();
+  if (!v) return null;
+  const url = /^[a-z][a-z0-9+.-]*:/i.test(v) ? v : `https://${v}`;
+  if (!/^https?:\/\//i.test(url) || !URL.canParse(url)) return null;
+  return new URL(url).hostname.includes(".") ? url : null;
+}
+
+
 const day = (label: string) =>
   z
     .string({ error: `Pick the ${label}` })
@@ -86,6 +99,14 @@ export const recipeSchema = z.object({
     )
     .max(40, "Keep a recipe under 40 steps")
     .default([]),
+  video_url: z
+    .string()
+    .trim()
+    .max(500, "Keep the link under 500 characters")
+    .refine((v) => !v || webLink(v) !== null, "Paste the full video link, like https://youtu.be/…")
+    .transform((v) => webLink(v))
+    .nullable()
+    .default(null),
   active: z.boolean(),
   notes: optionalText(1000),
 });

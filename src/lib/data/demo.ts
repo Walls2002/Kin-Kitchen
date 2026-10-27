@@ -136,6 +136,7 @@ function heal(s: Store): Store {
     r.lines ??= [];
     r.steps ??= [];
     r.utilities ??= [];
+    r.video_url ??= null;
   }
   for (const o of s.biz.orders) {
     o.items ??= [];

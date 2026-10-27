@@ -1,13 +1,13 @@
 "use client";
 
-import { ArrowDown, ArrowLeft, ArrowUp, ChefHat, Clock, Lock, Plus, Trash2, TriangleAlert, X } from "@/components/icons";
+import { ArrowDown, ArrowLeft, ArrowUp, ChefHat, Clock, ExternalLink, Lock, Plus, Trash2, TriangleAlert, X } from "@/components/icons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { deleteRecipe, restoreRecipe, saveRecipe } from "@/lib/biz-actions";
 import { recipeCost, type RecipeCost } from "@/lib/biz";
 import { formatCpu, formatCount, formatPeso, formatPesoWhole, formatQty } from "@/lib/format";
-import { fieldErrors, recipeSchema, type RecipeInput } from "@/lib/schemas";
+import { fieldErrors, recipeSchema, webLink, type RecipeInput } from "@/lib/schemas";
 import { isLow, type EntryUnit, type Ingredient, type Recipe, type RecipeStep, type Unit } from "@/lib/types";
 import { baseOf, displayUnitFor, factor, parseAmount } from "@/lib/units";
 import { Sheet } from "../sheet";
@@ -91,6 +91,7 @@ export function toRecipeInput(r: Recipe): RecipeInput {
     target_margin: r.target_margin,
     lines: r.lines.map((l) => ({ ingredient_id: l.ingredient_id, qty: l.qty })),
     steps: (r.steps ?? []).map((s) => ({ text: s.text, minutes: s.minutes })),
+    video_url: r.video_url ?? null,
     active: r.active,
     notes: r.notes,
   };
@@ -112,6 +113,7 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
     labor_cost: recipe ? show(recipe.labor_cost) : "",
     target_margin: recipe ? show(recipe.target_margin) : "50",
     notes: recipe?.notes ?? "",
+    video_url: recipe?.video_url ?? "",
     active: recipe?.active ?? true,
   }));
   const keySeq = useRef(0);
@@ -202,6 +204,7 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
     target_margin: num(v.target_margin),
     lines: parsed.map((p) => ({ ingredient_id: p.line.ingredient_id, qty: p.qty })),
     steps: steps.filter((s) => !isBlankStep(s)).map((s) => ({ text: s.text.trim(), minutes: stepMinutes(s.minutes) })),
+    video_url: v.video_url,
     active: v.active,
     notes: v.notes,
   };
@@ -533,7 +536,41 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
             )}
           </section>
 
-          <MethodEditor steps={steps} setSteps={setSteps} />
+          <MethodEditor steps={steps} setSteps={setSteps}>
+            <Field
+              label="Video to follow"
+              optional
+              error={errors.video_url}
+              hint="A YouTube link or any video you bake along with. Bake mode shows it as a Video button."
+            >
+              {(p) => (
+                <span className="flex gap-2">
+                  <Input
+                    {...p}
+                    type="url"
+                    inputMode="url"
+                    autoComplete="off"
+                    spellCheck={false}
+                    value={v.video_url}
+                    onChange={(e) => set({ video_url: e.target.value })}
+                    placeholder="https://youtu.be/…"
+                    className="min-w-0 flex-1"
+                  />
+                  {webLink(v.video_url) ? (
+                    <a
+                      href={webLink(v.video_url)!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={buttonClass("secondary", "md", "shrink-0 max-sm:w-11 max-sm:px-0")}
+                      aria-label="Open the video in a new tab"
+                    >
+                      <ExternalLink aria-hidden /> <span className="max-sm:hidden">Open</span>
+                    </a>
+                  ) : null}
+                </span>
+              )}
+            </Field>
+          </MethodEditor>
 
           {/* price and running costs */}
           <section className="surface p-4 sm:p-5" aria-labelledby={`${ids}-money`}>
@@ -629,7 +666,7 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
 
 /* ---------- method: the steps Bake mode walks through ---------- */
 
-function MethodEditor({ steps, setSteps }: { steps: StepState[]; setSteps: React.Dispatch<React.SetStateAction<StepState[]>> }) {
+function MethodEditor({ steps, setSteps, children }: { steps: StepState[]; setSteps: React.Dispatch<React.SetStateAction<StepState[]>>; children?: ReactNode }) {
   const ids = useId();
   const seq = useRef(0);
   const textRefs = useRef(new Map<string, HTMLTextAreaElement>());
@@ -667,6 +704,7 @@ function MethodEditor({ steps, setSteps }: { steps: StepState[]; setSteps: React
         </h2>
         <p className="mt-0.5 text-sm text-ink-2">The steps for one batch, in order. Bake mode shows them one at a time with the ingredients beside them.</p>
       </header>
+      {children ? <div className="sep-b px-4 py-4 sm:px-5">{children}</div> : null}
 
       {steps.length === 0 ? (
         <p className="px-4 py-6 text-sm text-ink-2 sm:px-5">Add the steps you follow, one per card. Steps with a timer get a countdown in Bake mode.</p>
