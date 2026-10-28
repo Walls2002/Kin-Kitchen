@@ -122,7 +122,7 @@ function seed(): Store {
 }
 
 /** Bump when the sample data changes so a running dev server re-seeds. */
-const SEED_VERSION = 16;
+const SEED_VERSION = 17;
 const g = globalThis as unknown as { __kinDemo?: Store };
 
 /**
@@ -137,6 +137,7 @@ function heal(s: Store): Store {
     r.steps ??= [];
     r.utilities ??= [];
     r.video_url ??= null;
+    r.varieties ??= [];
   }
   for (const o of s.biz.orders) {
     o.items ??= [];

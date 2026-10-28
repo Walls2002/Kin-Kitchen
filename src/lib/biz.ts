@@ -12,6 +12,8 @@ import {
   type Ingredient,
   type Order,
   type Recipe,
+  type RecipeLine,
+  type RecipeVariety,
   type StockMove,
   type Task,
   type TaxPayment,
@@ -128,14 +130,48 @@ export function recipeCost(r: Pick<Recipe, "lines" | "labor_cost" | "overhead_co
   };
 }
 
-/** Ingredients one order takes out of the pantry, by recipe and quantity. */
+/* ---------- varieties: the ways a product is sold ---------- */
+
+/** What one variety costs to make: its share of the batch plus the extras only it uses. */
+export function varietyCost(v: Pick<RecipeVariety, "units" | "extras">, perUnit: number, ingredients: Map<string, Ingredient>) {
+  const share = perUnit * v.units;
+  const extras = v.extras.reduce((s, l) => s + (ingredients.get(l.ingredient_id)?.cost_per_unit ?? 0) * l.qty, 0);
+  return { share, extras, total: share + extras };
+}
+
+export interface SellOption {
+  /** null: the plain unit of a recipe with no varieties. */
+  variety_id: string | null;
+  label: string;
+  price: number;
+  units: number;
+  extras: RecipeLine[];
+  note: string | null;
+}
+
+/** How a product is sold: each of its varieties, or one unit at the recipe's price when it has none. */
+export function sellOptions(r: Pick<Recipe, "varieties" | "yield_label" | "price">): SellOption[] {
+  if (r.varieties?.length) return r.varieties.map((v) => ({ variety_id: v.id, label: v.name, price: v.price, units: v.units, extras: v.extras, note: v.note }));
+  return [{ variety_id: null, label: `Per ${r.yield_label}`, price: r.price, units: 1, extras: [], note: null }];
+}
+
+/** The name an order line keeps: "Fudgy Brownies · Box of 6", or just the product when it sells one way. */
+export const sellName = (r: Pick<Recipe, "name" | "varieties">, o: SellOption) => (o.variety_id && r.varieties.length > 1 ? `${r.name} · ${o.label}` : r.name);
+
+/** The variety an order line is for, if it names one that still exists. */
+export const varietyOf = (r: Pick<Recipe, "varieties">, id: string | null | undefined) => (id ? r.varieties?.find((v) => v.id === id) : undefined);
+
+/** Ingredients one order takes out of the pantry, by recipe, variety and quantity. */
 export function stockMovesFor(order: Pick<Order, "items">, recipes: Map<string, Recipe>): StockMove[] {
   const need = new Map<string, number>();
+  const add = (id: string, qty: number) => need.set(id, (need.get(id) ?? 0) + qty);
   for (const item of order.items) {
     const r = item.recipe_id ? recipes.get(item.recipe_id) : undefined;
     if (!r || r.yield_qty <= 0) continue;
-    const batches = item.qty / r.yield_qty;
-    for (const l of r.lines) need.set(l.ingredient_id, (need.get(l.ingredient_id) ?? 0) + l.qty * batches);
+    const v = varietyOf(r, item.variety_id);
+    const batches = (item.qty * (v?.units ?? 1)) / r.yield_qty;
+    for (const l of r.lines) add(l.ingredient_id, l.qty * batches);
+    for (const l of v?.extras ?? []) add(l.ingredient_id, l.qty * item.qty);
   }
   return Array.from(need, ([ingredient_id, qty]) => ({ ingredient_id, qty: Math.round(qty * 1000) / 1000 }));
 }

@@ -253,6 +253,7 @@ export function seedBusiness(ingredients: Ingredient[], history: PriceEntry[], n
   /* recipes */
   const recipes: Recipe[] = RECIPES.map((s, i) => ({
     id: `rec-${String(i + 1).padStart(2, "0")}`,
+    varieties: [{ id: `v-${i + 1}`, name: s.yield_label[0].toUpperCase() + s.yield_label.slice(1), units: 1, price: s.price, extras: [], note: null }],
     name: s.name,
     group: s.group,
     yield_qty: s.yield_qty,

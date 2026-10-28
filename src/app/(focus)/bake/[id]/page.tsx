@@ -5,7 +5,7 @@ import type { BakeQueueItem } from "@/components/bake/queue";
 import { today } from "@/lib/biz";
 import { getRepo } from "@/lib/data";
 import { relativeDay } from "@/lib/format";
-import { isLow, type Sketch } from "@/lib/types";
+import { isLow, type OrderItem, type Sketch } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +55,7 @@ export default async function BakePage({ params, searchParams }: Props) {
         number: o.number,
         customer: o.customer,
         due: dueText(o.due_date, today()),
-        items: o.items.filter((i) => i.recipe_id).map((i) => ({ recipe_id: i.recipe_id!, name: i.name, qty: i.qty })),
+        items: perRecipe(o.items),
       };
       sketches = all.filter((s) => s.order_id === o.id);
     }
@@ -67,15 +67,13 @@ export default async function BakePage({ params, searchParams }: Props) {
     .filter((o) => o.status === "pending" || o.status === "baking")
     .sort((a, b) => a.due_date.localeCompare(b.due_date) || a.number - b.number)
     .flatMap((o) =>
-      o.items
-        .filter((i) => i.recipe_id)
-        .map((i) => ({
+      perRecipe(o.items).map((i) => ({
           key: `${o.id}:${i.recipe_id}`,
           order_id: o.id,
           number: o.number,
           customer: o.customer,
           due: dueText(o.due_date, now),
-          recipe_id: i.recipe_id!,
+          recipe_id: i.recipe_id,
           name: i.name,
           qty: i.qty,
         })),
@@ -83,4 +81,19 @@ export default async function BakePage({ params, searchParams }: Props) {
 
   // Keyed by recipe and order, so moving to the next bake always starts it fresh.
   return <BakeMode key={`${id}:${orderId ?? ""}`} recipe={recipe} ingredients={ingredients} order={order} sketches={sketches} queue={queue} />;
+}
+
+/**
+ * An order's products, one per recipe: two varieties of the same recipe (a box of 6 and a
+ * box of 12) are one bake, named by the product.
+ */
+function perRecipe(items: OrderItem[]): { recipe_id: string; name: string; qty: number }[] {
+  const out = new Map<string, { recipe_id: string; name: string; qty: number }>();
+  for (const i of items) {
+    if (!i.recipe_id) continue;
+    const seen = out.get(i.recipe_id);
+    if (seen) out.set(i.recipe_id, { ...seen, name: seen.name.split(" · ")[0], qty: seen.qty + i.qty });
+    else out.set(i.recipe_id, { recipe_id: i.recipe_id, name: i.name, qty: i.qty });
+  }
+  return Array.from(out.values());
 }

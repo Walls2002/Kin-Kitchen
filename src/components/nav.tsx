@@ -19,6 +19,7 @@ import {
   Scales,
   Settings,
   Sun,
+  Tag,
   TrendingUp,
   Wallet,
   Boxes,
@@ -50,7 +51,8 @@ export const NAV: { group: string | null; items: NavItem[] }[] = [
     group: "Sell",
     items: [
       { href: "/orders", label: "Orders", icon: ClipboardList, blurb: "Every order, payment and due date" },
-      { href: "/recipes", label: "Recipes", icon: BookOpenText, blurb: "Pricing, steps, and Bake mode for the kitchen" },
+      { href: "/price-list", label: "Price list", icon: Tag, blurb: "Every product's prices in one list, ready to copy" },
+      { href: "/recipes", label: "Recipes", icon: BookOpenText, blurb: "Ingredients, steps, the cost of each variety, and Bake mode" },
       { href: "/designs", label: "Cake designs", icon: Palette, blurb: "Sketch a customer's cake and keep every design" },
     ],
   },
@@ -134,7 +136,7 @@ const TABS: { href: string; label: string; icon: LucideIcon; match: string[] }[]
   { href: "/orders", label: "Orders", icon: ClipboardList, match: ["/orders"] },
   { href: "/ingredients", label: "Inventory", icon: Boxes, match: ["/ingredients", "/pantry"] },
   { href: "/income", label: "Money", icon: Wallet, match: ["/income", "/expenses", "/tax"] },
-  { href: "/more", label: "More", icon: Ellipsis, match: ["/more", "/reports", "/recipes", "/designs", "/tasks", "/settings", "/guide", "/conversions"] },
+  { href: "/more", label: "More", icon: Ellipsis, match: ["/more", "/reports", "/price-list", "/recipes", "/designs", "/tasks", "/settings", "/guide", "/conversions"] },
 ];
 
 export function TabBar() {

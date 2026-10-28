@@ -39,7 +39,7 @@ const TABLE_NUMERIC: Record<string, string[]> = {
 
 /** jsonb list columns per table; always arrays in the app. */
 const LIST_COLUMNS: Record<string, string[]> = {
-  recipes: ["lines", "steps", "utilities"],
+  recipes: ["lines", "steps", "utilities", "varieties"],
   orders: ["items", "payments"],
   sketches: ["strokes", "extra_views"],
 };
@@ -47,10 +47,10 @@ const LIST_COLUMNS: Record<string, string[]> = {
 /**
  * Columns a later migration adds. Until that migration is run, a write that
  * includes one is retried without it, so saving never breaks on an old database.
- * (recipes.utilities: 0007; overhead_cost still carries their total. recipes.video_url: 0008.)
+ * (recipes.utilities: 0007; overhead_cost still carries their total. recipes.video_url: 0008. recipes.varieties: 0009.)
  */
 const LATER_COLUMNS: Record<string, string[]> = {
-  recipes: ["utilities", "video_url"],
+  recipes: ["utilities", "video_url", "varieties"],
 };
 
 /** The later column a failed write names as missing, if any. */

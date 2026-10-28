@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { z } from "zod";
-import { recipeCost, stockMovesFor, today } from "./biz";
+import { recipeCost, stockMovesFor, today, varietyCost, varietyOf } from "./biz";
 import { getRepo, RepoError } from "./data";
 import {
   balanceSchema,
@@ -17,7 +17,7 @@ import {
   taxPaymentSchema,
   viewSchema,
 } from "./schemas";
-import type { ActionResult, BalanceItem, DashboardView, Expense, IncomeEntry, Order, OrderStatus, Payment, Recipe, Sketch, StockMove, Task, TaxPayment } from "./types";
+import type { ActionResult, BalanceItem, DashboardView, Expense, IncomeEntry, Order, OrderItem, OrderStatus, Payment, Recipe, Sketch, StockMove, Task, TaxPayment } from "./types";
 
 const refresh = () => revalidatePath("/", "layout");
 
@@ -51,7 +51,13 @@ export async function saveRecipe(id: string | null, raw: unknown): Promise<Actio
   const p = parse(recipeSchema, raw);
   if (!p.ok) return p.result;
   // Itemized utilities are the overhead; a recipe without them keeps its single overhead figure.
-  const data = p.data.utilities.length ? { ...p.data, overhead_cost: p.data.utilities.reduce((s, u) => s + u.cost, 0) } : p.data;
+  // The first variety sets the per-unit price older screens read; with none, the price stays as typed.
+  const first = p.data.varieties[0];
+  const data = {
+    ...p.data,
+    ...(p.data.utilities.length ? { overhead_cost: p.data.utilities.reduce((s, u) => s + u.cost, 0) } : {}),
+    ...(first ? { price: Math.round((first.price / first.units) * 100) / 100 } : {}),
+  };
   return run(async () => {
     const repo = await getRepo();
     return id ? repo.recipes.update(id, data) : repo.recipes.create(data);
@@ -79,9 +85,13 @@ async function costs() {
   const [recipes, ingredients] = await Promise.all([repo.recipes.list(), repo.listIngredients()]);
   const ingById = new Map(ingredients.map((i) => [i.id, i]));
   const recipeById = new Map(recipes.map((r) => [r.id, r]));
-  const unitCost = (recipeId: string | null, fallback: number) => {
-    const r = recipeId ? recipeById.get(recipeId) : undefined;
-    return r ? Math.round(recipeCost(r, ingById).perUnit * 100) / 100 : fallback;
+  /** One order line's cost each: the recipe's cost per unit, or its variety's cost. */
+  const unitCost = (item: Pick<OrderItem, "recipe_id" | "variety_id" | "unit_cost">) => {
+    const r = item.recipe_id ? recipeById.get(item.recipe_id) : undefined;
+    if (!r) return item.unit_cost;
+    const perUnit = recipeCost(r, ingById).perUnit;
+    const v = varietyOf(r, item.variety_id);
+    return Math.round((v ? varietyCost(v, perUnit, ingById).total : perUnit) * 100) / 100;
   };
   return { repo, ingredients, recipeById, unitCost };
 }
@@ -131,7 +141,7 @@ async function applyStatus(order: Order, status: OrderStatus): Promise<StatusCha
   let items = order.items;
   if (status === "done" && previous !== "done") {
     const { unitCost } = await costs();
-    items = order.items.map((i) => ({ ...i, unit_cost: unitCost(i.recipe_id, i.unit_cost) }));
+    items = order.items.map((i) => ({ ...i, unit_cost: unitCost(i) }));
     const taken = await takeStock(order);
     moves = taken.moves;
     short = taken.short;
@@ -154,7 +164,7 @@ export async function saveOrder(id: string | null, raw: unknown): Promise<Action
     if (id && !existing) throw new RepoError("That order no longer exists");
     const wasDone = existing?.status === "done";
     // Costs follow the recipe until the order is finished; then they are fixed.
-    const items = wasDone ? p.data.items : p.data.items.map((i) => ({ ...i, unit_cost: unitCost(i.recipe_id, i.unit_cost) }));
+    const items = wasDone ? p.data.items : p.data.items.map((i) => ({ ...i, unit_cost: unitCost(i) }));
     const base = { ...p.data, items, status: existing?.status ?? "pending" };
     const saved = existing
       ? await repo.orders.update(existing.id, base)

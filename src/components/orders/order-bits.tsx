@@ -19,7 +19,7 @@ export const toOrderInput = (o: Order): OrderInput => ({
   order_date: o.order_date,
   due_date: o.due_date,
   status: o.status,
-  items: o.items.map((i) => ({ recipe_id: i.recipe_id, name: i.name, qty: i.qty, unit_price: i.unit_price, unit_cost: i.unit_cost })),
+  items: o.items.map((i) => ({ recipe_id: i.recipe_id, variety_id: i.variety_id ?? null, name: i.name, qty: i.qty, unit_price: i.unit_price, unit_cost: i.unit_cost })),
   delivery_fee: o.delivery_fee,
   discount: o.discount,
   payments: o.payments.map((p) => ({ id: p.id, amount: p.amount, date: p.date, method: p.method })),

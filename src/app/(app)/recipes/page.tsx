@@ -4,7 +4,7 @@ import { RecipesSheet } from "@/components/recipes/recipes-sheet";
 import { ButtonLink } from "@/components/ui";
 import { loadBusiness } from "@/lib/biz-data";
 
-export const metadata: Metadata = { title: "Recipe pricing" };
+export const metadata: Metadata = { title: "Recipes" };
 export const dynamic = "force-dynamic";
 
 export default async function RecipesPage() {
@@ -14,15 +14,15 @@ export default async function RecipesPage() {
   return (
     <>
       <PageHeader
-        title="Recipe pricing"
+        title="Recipes"
         sub={
           b.recipes.length ? (
             <>
               {active} {active === 1 ? "product" : "products"}
-              {off ? ` · ${off} not selling` : ""} · costs follow today&apos;s ingredient prices
+              {off ? ` · ${off} not selling` : ""} · open one to see what each variety costs
             </>
           ) : (
-            "Cost and profit per product, from live ingredient prices"
+            "Ingredients, method and the cost of every variety you sell"
           )
         }
         actions={

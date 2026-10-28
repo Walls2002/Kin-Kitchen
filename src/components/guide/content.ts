@@ -229,24 +229,26 @@ export const CHAPTERS: Chapter[] = [
           "Under Product, give it a **Name**, then fill in **One batch makes** (for example 12) and **One unit is called** (pc, box of 12, whole cake).",
           "Under Ingredients for one batch, type into \"Add an item: search the pantry\". Pick with [[↑]] [[↓]] and [[Enter]], or tap it.",
           "The cursor jumps to the amount. Type it like 250 g, 1.5 kg or 3 pc.",
-          "Under Price and running costs, fill in **Selling price**, **Profit on cost** (it starts at 50%, so the price is the cost plus half), **Labor per batch** and **Utilities per batch**: what one batch spends on electricity, water and gas (tap **+ Other** for anything else).",
-          "Watch the price label: cost per unit, batch cost, profit and profit on cost update as you type. **Suggested price** is your cost plus your **Profit on cost** (50% means cost × 1.5), rounded up to the next ₱5; tap **Use this price** to take it.",
+          "Under Varieties and prices, set each way you sell it: a **Name** (Box of 6), its **Size** in units (6 × pc) and its **Price**. Tap **Add variety** for another size. Each variety shows what it costs to make and your profit.",
+          "If a variety needs something the others don't (its own frosting, a gift box), open **Extra items** under it and add those pantry items for one sold. The same place has a **Price list note**, like save ₱50.",
+          "Under Running costs and profit, fill in **Profit on cost** (it starts at 50%, so the price is the cost plus half), **Labor per batch** and **Utilities per batch**: what one batch spends on electricity, water and gas (tap **+ Other** for anything else).",
+          "Under a variety's cost, **Use ₱…** sets its price to the cost plus your Profit on cost, rounded up to the next ₱5.",
           "Tap **Add recipe** to save it, or **Save recipe** after changes.",
         ],
       },
       {
-        title: "Quote a bulk order",
+        title: "See every price at once",
         steps: [
-          "On a recipe, find **Quote a bulk order**.",
-          "Type the quantity in **How many?**. You'll see the total price, total cost, total profit and how many batches to bake.",
+          "Open **Price list** under Sell. It lists every variety of every product on the menu, grouped like your recipes.",
+          "Tap **Copy as text** to paste the whole list into Messenger or a post.",
+          "To change a price, open the recipe and edit it under Varieties and prices.",
         ],
       },
       {
-        title: "Compare your products",
+        title: "Spot products earning too little",
         steps: [
-          "The Recipe pricing list shows each product's **Price**, **Cost per unit**, **Profit per unit**, **Margin** and **Suggested price**.",
-          "A product earning less than its profit on cost shows an \"under 50%\" tag (or whatever target you set).",
-          "Click a column heading to sort by it; click again to reverse.",
+          "The Recipes list shows each product with the varieties it sells as.",
+          "A product with a variety earning less than its profit on cost shows an \"under 50%\" tag (or whatever target you set). Open it to see which one.",
         ],
       },
     ],
@@ -276,7 +278,7 @@ export const CHAPTERS: Chapter[] = [
       {
         title: "Bake a recipe",
         steps: [
-          "Open Bake mode: **Start baking** on the recipe, the chef's hat beside it in the Recipe pricing list, or **Bake this** next to an item on an order.",
+          "Open Bake mode: **Start baking** on the recipe, the chef's hat beside it in the Recipes list, or **Bake this** next to an item on an order.",
           "The **Get ready** screen lists what to set out. When it's all on the counter, tap **Start**.",
           "Read the step in large type. Move with **Next step** and **Back**, or swipe left and right. On a keyboard, [[→]] and [[←]] move, and [[Space]] or [[Enter]] goes to the next step.",
           "When a step has a time, tap **Start 45 min timer** (it shows that step's minutes). Timers keep running while you move on; each one shows as a small pill at the top. Tap a pill to pause or resume it; press and hold to cancel it.",
@@ -304,7 +306,7 @@ export const CHAPTERS: Chapter[] = [
         steps: [
           "Tap **New order** (on a phone, the round **Order** button).",
           "Under Customer, type the **Name**. Past customers are suggested and fill in the **Contact** for you. Set **Came in through**, **Ordered on** and **Due**.",
-          "Under Items, type into \"Add an item: search your recipes\" and pick one. Picking the same recipe again adds one more.",
+          "Under Items, type into \"Add an item: search your recipes\" and pick one. Each variety (Box of 6, Box of 12) is its own pick at its own price. Picking the same one again adds one more.",
           "For something that isn't a recipe, pick **+ Custom item**. It has no recipe cost and uses nothing from the pantry.",
           "Set each item's quantity with − and +, and check **Price each**.",
           "Add a **Delivery fee** or **Discount** if there is one, and **Notes** (dedication, pickup time, allergies, address).",

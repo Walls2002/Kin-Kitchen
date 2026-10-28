@@ -73,6 +73,20 @@ export interface RecipeUtility {
   cost: number;
 }
 
+/** One way a product is sold: a box of 6, a 6x2 cake with fondant. The price list is every variety. */
+export interface RecipeVariety {
+  id: string;
+  /** "Box of 6", "Icing 6x4". */
+  name: string;
+  /** How many of the recipe's units one of these is: 6 for a box of 6 pc, 0.5 for a half-height cake. */
+  units: number;
+  price: number;
+  /** Pantry items only this variety uses, for one sold: icing, a gift box, a candle. */
+  extras: RecipeLine[];
+  /** A line for the price list, like "save ₱50". */
+  note: string | null;
+}
+
 export interface Recipe {
   id: string;
   name: string;
@@ -82,7 +96,7 @@ export interface Recipe {
   yield_qty: number;
   /** What one sellable unit is called: "pack of 12", "whole cake". */
   yield_label: string;
-  /** Selling price for one sellable unit. */
+  /** Price of one unit. With varieties, the first variety's price per unit (they set the real prices). */
   price: number;
   /** Per batch. */
   labor_cost: number;
@@ -95,6 +109,8 @@ export interface Recipe {
   lines: RecipeLine[];
   /** Method, in order. Bake mode walks through these. */
   steps: RecipeStep[];
+  /** How it's sold, each with its own price. Empty: sold per unit at `price`. */
+  varieties: RecipeVariety[];
   /** A reference video (YouTube or any web link), opened from Bake mode. */
   video_url: string | null;
   active: boolean;
@@ -113,6 +129,8 @@ export const SALES_CHANNELS = ["Facebook", "Instagram", "Walk-in", "Referral", "
 
 export interface OrderItem {
   recipe_id: string | null;
+  /** The recipe's variety ordered (box of 6, 6x2 cake); null for the plain unit. */
+  variety_id?: string | null;
   /** Snapshot of the product name when ordered. */
   name: string;
   qty: number;

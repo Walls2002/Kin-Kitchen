@@ -99,6 +99,7 @@ export const ClipboardList = make(Ph.ClipboardText, "ClipboardList");
 export const BookOpenText = make(Ph.BookOpenText, "BookOpenText");
 export const HandCoins = make(Ph.HandCoins, "HandCoins");
 export const Receipt = make(Ph.Receipt, "Receipt");
+export const Tag = make(Ph.Tag, "Tag");
 export const ReceiptText = Receipt;
 export const Landmark = make(Ph.Bank, "Landmark");
 export const Wallet = make(Ph.Wallet, "Wallet");

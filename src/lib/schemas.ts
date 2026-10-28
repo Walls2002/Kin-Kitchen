@@ -99,6 +99,19 @@ export const recipeSchema = z.object({
     )
     .max(40, "Keep a recipe under 40 steps")
     .default([]),
+  varieties: z
+    .array(
+      z.object({
+        id: z.string().min(1).max(40),
+        name: z.string().trim().min(1, "Name each variety, like Box of 6").max(60, "Keep a variety name under 60 characters"),
+        units: positive("how many units it is"),
+        price: peso("variety price"),
+        extras: z.array(z.object({ ingredient_id: z.string().min(1), qty: positive("amount") })).max(20, "Keep a variety under 20 extra items"),
+        note: optionalText(80),
+      }),
+    )
+    .max(20, "Keep a product under 20 varieties")
+    .default([]),
   video_url: z
     .string()
     .trim()
@@ -124,6 +137,7 @@ export const orderSchema = z
       .array(
         z.object({
           recipe_id: z.string().nullable(),
+          variety_id: z.string().max(40).nullable().optional(),
           name: z.string().trim().min(1, "Name the item").max(80),
           qty: positive("quantity"),
           unit_price: peso("price"),

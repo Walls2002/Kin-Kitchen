@@ -1,14 +1,14 @@
 "use client";
 
-import { ArrowDown, ArrowLeft, ArrowUp, ChefHat, Clock, ExternalLink, Lock, Plus, Trash2, TriangleAlert, X } from "@/components/icons";
+import { ArrowDown, ArrowLeft, ArrowUp, ChefHat, ChevronDown, Clock, ExternalLink, Lock, Plus, Trash2, TriangleAlert, X } from "@/components/icons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { deleteRecipe, restoreRecipe, saveRecipe } from "@/lib/biz-actions";
-import { recipeCost, type RecipeCost } from "@/lib/biz";
+import { recipeCost, roundUpTo, varietyCost, type RecipeCost } from "@/lib/biz";
 import { formatCpu, formatCount, formatPeso, formatPesoWhole, formatQty } from "@/lib/format";
 import { fieldErrors, recipeSchema, webLink, type RecipeInput } from "@/lib/schemas";
-import { isLow, type EntryUnit, type Ingredient, type Recipe, type RecipeStep, type Unit } from "@/lib/types";
+import { isLow, type EntryUnit, type Ingredient, type Recipe, type RecipeLine, type RecipeStep, type Unit } from "@/lib/types";
 import { baseOf, displayUnitFor, factor, parseAmount } from "@/lib/units";
 import { Sheet } from "../sheet";
 import { useToast } from "../toast";
@@ -67,6 +67,35 @@ interface UtilityState {
 
 const UTILITY_PRESETS = ["Electricity", "Water", "Gas (LPG)"];
 
+/** A pantry item only one variety uses (icing, a gift box), typed like an ingredient line. */
+interface ExtraState {
+  key: string;
+  ingredient_id: string;
+  text: string;
+  touched: boolean;
+  storedQty: number | null;
+  fallback: EntryUnit;
+}
+
+interface VarietyState {
+  key: string;
+  /** Kept across saves so orders can point at it. */
+  id: string;
+  name: string;
+  units: string;
+  price: string;
+  note: string;
+  extras: ExtraState[];
+  open: boolean;
+  touched: boolean;
+}
+
+// Works on plain http too (a phone on the shop wifi), where crypto.randomUUID is missing.
+const newVarietyId = () => `v${Math.random().toString(36).slice(2, 10)}`;
+const capital = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
+/** A blank card (no name, price or extras) is dropped on save instead of blocking it. */
+const isBlankVariety = (v: VarietyState) => !v.name.trim() && !v.price.trim() && v.extras.length === 0;
+
 const num = (s: string) => (s.trim() === "" ? NaN : Number(s.replace(/[₱,\s]/g, "")));
 const show = (n: number) => (Number.isFinite(n) ? String(Math.round(n * 1000) / 1000) : "");
 const orZero = (n: number) => (Number.isFinite(n) ? n : 0);
@@ -75,6 +104,25 @@ const amountText = (qty: number, unit: Unit) => {
   const u = displayUnitFor(unit, qty);
   return `${show(qty / factor(u))} ${u}`;
 };
+
+/** An amount typed on a line ("250 g", "1.5 kg", "3"), read in the pantry item's unit. */
+function readAmount(l: { text: string; storedQty: number | null; fallback: EntryUnit }, ing: Ingredient | undefined, emptyError: string): { qty: number; error?: string } {
+  if (!ing) return { qty: l.storedQty ?? 0 };
+  if (!l.text.trim()) return { qty: 0, error: emptyError };
+  const p = parseAmount(l.text, ing.unit, baseOf(l.fallback) === ing.unit ? l.fallback : ing.unit);
+  if ("error" in p) return { qty: 0, error: p.error };
+  if (!(p.value > 0)) return { qty: 0, error: "The amount must be more than 0" };
+  return { qty: p.value };
+}
+
+const toExtraState = (l: RecipeLine, key: string, ing: Ingredient | undefined): ExtraState => ({
+  key,
+  ingredient_id: l.ingredient_id,
+  text: amountText(l.qty, ing?.unit ?? "g"),
+  touched: false,
+  storedQty: ing ? null : l.qty,
+  fallback: displayUnitFor(ing?.unit ?? "g", l.qty),
+});
 
 const SERIES = ["var(--series-1)", "var(--series-2)", "var(--series-3)"];
 
@@ -91,6 +139,7 @@ export function toRecipeInput(r: Recipe): RecipeInput {
     target_margin: r.target_margin,
     lines: r.lines.map((l) => ({ ingredient_id: l.ingredient_id, qty: l.qty })),
     steps: (r.steps ?? []).map((s) => ({ text: s.text, minutes: s.minutes })),
+    varieties: (r.varieties ?? []).map((x) => ({ ...x, extras: x.extras.map((l) => ({ ...l })) })),
     video_url: r.video_url ?? null,
     active: r.active,
     notes: r.notes,
@@ -109,7 +158,6 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
     group: recipe?.group ?? "",
     yield_qty: recipe ? show(recipe.yield_qty) : "",
     yield_label: recipe?.yield_label ?? "pc",
-    price: recipe ? show(recipe.price) : "",
     labor_cost: recipe ? show(recipe.labor_cost) : "",
     target_margin: recipe ? show(recipe.target_margin) : "50",
     notes: recipe?.notes ?? "",
@@ -144,6 +192,23 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
           : []
         : UTILITY_PRESETS.map((name, n) => ({ key: `u${n}`, name, cost: "" })),
   );
+  // A recipe priced before varieties existed starts with one: its unit at its price.
+  const [varieties, setVarieties] = useState<VarietyState[]>(() => {
+    if (recipe?.varieties?.length)
+      return recipe.varieties.map((x, n) => ({
+        key: `v${n}`,
+        id: x.id,
+        name: x.name,
+        units: show(x.units),
+        price: show(x.price),
+        note: x.note ?? "",
+        extras: x.extras.map((l, m) => toExtraState(l, `v${n}x${m}`, ingById.get(l.ingredient_id))),
+        open: false,
+        touched: false,
+      }));
+    if (recipe && !(recipe.price > 0)) return [];
+    return [{ key: "v0", id: newVarietyId(), name: recipe ? capital(recipe.yield_label) : "", units: "1", price: recipe ? show(recipe.price) : "", note: "", extras: [], open: false, touched: false }];
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string>();
   const formRef = useRef<HTMLFormElement>(null);
@@ -158,7 +223,6 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
     });
     return () => cancelAnimationFrame(raf);
   }, [reveal]);
-  const [quoteQty, setQuoteQty] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const amountRefs = useRef(new Map<string, HTMLInputElement>());
   const [focusKey, setFocusKey] = useState<string | null>(null);
@@ -181,13 +245,28 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
 
   const parsed = lines.map((l) => {
     const ing = ingById.get(l.ingredient_id);
-    if (!ing) return { line: l, ing: undefined, qty: l.storedQty ?? 0, error: undefined as string | undefined };
-    if (!l.text.trim()) return { line: l, ing, qty: 0, error: "Enter how much one batch uses" };
-    const p = parseAmount(l.text, ing.unit, baseOf(l.fallback) === ing.unit ? l.fallback : ing.unit);
-    if ("error" in p) return { line: l, ing, qty: 0, error: p.error };
-    if (!(p.value > 0)) return { line: l, ing, qty: 0, error: "The amount must be more than 0" };
-    return { line: l, ing, qty: p.value, error: undefined };
+    return { line: l, ing, ...readAmount(l, ing, "Enter how much one batch uses") };
   });
+
+  const unitName = v.yield_label.trim() || "unit";
+  const parsedVarieties = varieties.map((vs) => {
+    const extras = vs.extras.map((x) => {
+      const ing = ingById.get(x.ingredient_id);
+      return { x, ing, ...readAmount(x, ing, "Enter how much one uses") };
+    });
+    const units = num(vs.units);
+    const price = num(vs.price);
+    const err: { name?: string; units?: string; price?: string } = {};
+    if (vs.name.trim().length > 60) err.name = "Keep the name under 60 characters";
+    if (!Number.isFinite(units)) err.units = vs.units.trim() ? "Type a number, like 6" : `How many ${unitName} is one? Like 6`;
+    else if (!(units > 0)) err.units = "Must be more than 0";
+    if (vs.price.trim() === "") err.price = "Enter the price";
+    else if (!Number.isFinite(price)) err.price = "Type the price as a number";
+    else if (price < 0) err.price = "The price can't be negative";
+    return { vs, extras, units, price, err, blank: isBlankVariety(vs) };
+  });
+  const keptVarieties = parsedVarieties.filter((p) => !p.blank);
+  const firstVariety = keptVarieties[0];
 
   // Lines with no amount are left out, so the starter Electricity / Water / Gas rows never block a save.
   const utilityItems = utilities.filter((u) => u.cost.trim() !== "").map((u) => ({ name: u.name.trim(), cost: num(u.cost) }));
@@ -197,13 +276,22 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
     group: v.group,
     yield_qty: num(v.yield_qty),
     yield_label: v.yield_label,
-    price: num(v.price),
+    price: firstVariety && firstVariety.units > 0 ? orZero(firstVariety.price) / firstVariety.units : 0,
     labor_cost: v.labor_cost.trim() === "" ? 0 : num(v.labor_cost),
     overhead_cost: utilityItems.reduce((s, u) => s + orZero(u.cost), 0),
     utilities: utilityItems,
     target_margin: num(v.target_margin),
     lines: parsed.map((p) => ({ ingredient_id: p.line.ingredient_id, qty: p.qty })),
     steps: steps.filter((s) => !isBlankStep(s)).map((s) => ({ text: s.text.trim(), minutes: stepMinutes(s.minutes) })),
+    // An unnamed variety takes the unit's name, so a one-price product needs only its price.
+    varieties: keptVarieties.map((p) => ({
+      id: p.vs.id,
+      name: p.vs.name.trim() || capital(unitName),
+      units: p.units,
+      price: p.price,
+      extras: p.extras.map((e) => ({ ingredient_id: e.x.ingredient_id, qty: e.qty })),
+      note: p.vs.note,
+    })),
     video_url: v.video_url,
     active: v.active,
     notes: v.notes,
@@ -220,6 +308,18 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
     },
     ingById,
   );
+
+  const target = orZero(payload.target_margin);
+  const varietyRows = parsedVarieties.map((p) => {
+    const c = varietyCost({ units: orZero(p.units), extras: p.extras.map((e) => ({ ingredient_id: e.x.ingredient_id, qty: e.qty })) }, cost.perUnit, ingById);
+    const price = orZero(p.price);
+    return {
+      ...p,
+      cost: c,
+      markup: c.total > 0 && price > 0 ? ((price - c.total) / c.total) * 100 : null,
+      suggested: c.total > 0 ? roundUpTo(c.total * (1 + Math.max(0, target) / 100), 5) : 0,
+    };
+  });
 
   const snapshot = JSON.stringify(payload);
   const [baseline, setBaseline] = useState(snapshot);
@@ -261,17 +361,25 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
     setFormError(undefined);
     setLines((ls) => ls.map((l) => ({ ...l, touched: true })));
     setSteps((ss) => ss.map((s) => ({ ...s, touched: true })));
+    setVarieties((vs) => vs.map((x) => ({ ...x, touched: true, extras: x.extras.map((e) => ({ ...e, touched: true })) })));
     const lineError = parsed.find((p) => p.error);
     const stepError = steps.findIndex((s) => !isBlankStep(s) && Object.keys(checkStep(s)).length > 0);
+    const varietyError = keptVarieties.find((p) => Object.keys(p.err).length > 0 || p.extras.some((e) => e.error));
     const result = recipeSchema.safeParse(payload);
-    if (!result.success || lineError || stepError >= 0) {
+    if (!result.success || lineError || stepError >= 0 || varietyError) {
       setErrors(result.success ? {} : fieldErrors(result.error));
+      // An extra that fails sits in a folded card; open it so the error shows.
+      if (varietyError?.extras.some((e) => e.error)) setVarieties((vs) => vs.map((x) => (x.key === varietyError.vs.key ? { ...x, open: true } : x)));
+      const varietyName = varietyError ? varietyError.vs.name.trim() || capital(unitName) : "";
+      const varietyProblem = varietyError ? (Object.values(varietyError.err)[0] ?? varietyError.extras.find((e) => e.error)?.error ?? "") : "";
       showFailure(
         lineError
           ? `Check the amount for ${lineError.ing?.name ?? "an ingredient"}: ${(lineError.error ?? "").toLowerCase()}.`
-          : stepError >= 0
-            ? `Check step ${stepError + 1} in Method: ${(Object.values(checkStep(steps[stepError]))[0] ?? "").toLowerCase()}.`
-            : "Some fields need attention.",
+          : varietyError
+            ? `Check ${varietyName} in Varieties: ${varietyProblem.toLowerCase()}.`
+            : stepError >= 0
+              ? `Check step ${stepError + 1} in Method: ${(Object.values(checkStep(steps[stepError]))[0] ?? "").toLowerCase()}.`
+              : "Some fields need attention.",
         !!after,
       );
       return;
@@ -285,6 +393,7 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
       }
       setBaseline(snapshot);
       setSteps((ss) => ss.filter((s) => !isBlankStep(s)));
+      setVarieties((vs) => vs.filter((x) => !isBlankVariety(x)));
       if (after) {
         after();
         return;
@@ -319,14 +428,13 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
     });
   };
 
-  const unitName = v.yield_label.trim() || "unit";
   const yieldN = orZero(payload.yield_qty);
 
   return (
     <form ref={formRef} onSubmit={submit} noValidate>
       <Link href="/recipes" className="-ml-2 inline-flex h-11 items-center gap-1.5 rounded-[var(--radius-surface)] px-2 text-sm font-medium text-ink-2 hover:text-ink lg:h-9">
         <ArrowLeft className="size-4" aria-hidden />
-        Recipe pricing
+        Recipes
       </Link>
       <header className="mt-1 flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
         <div className="min-w-0 flex-1 basis-80">
@@ -362,13 +470,11 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
         <aside className="flex flex-col gap-5 lg:sticky lg:top-8 lg:col-start-2 lg:row-start-1" aria-label="Cost and profit">
           <PriceLabel
             cost={cost}
-            price={orZero(payload.price)}
-            target={orZero(payload.target_margin)}
+            target={target}
             unitName={unitName}
             yieldN={yieldN}
-            onUsePrice={(p) => set({ price: String(p) })}
+            varieties={varietyRows.filter((r) => !r.blank).map((r) => ({ key: r.vs.key, name: r.vs.name.trim() || capital(unitName), price: orZero(r.price), cost: r.cost.total, markup: r.markup }))}
           />
-          <QuoteCalc className="max-lg:hidden" qty={quoteQty} setQty={setQuoteQty} cost={cost} price={orZero(payload.price)} yieldN={yieldN} unitName={unitName} />
         </aside>
 
         <div className="flex min-w-0 flex-col gap-5 lg:col-start-1 lg:row-start-1">
@@ -536,6 +642,8 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
             )}
           </section>
 
+          <VarietiesEditor rows={varietyRows} setVarieties={setVarieties} unitName={unitName} perUnit={cost.perUnit} target={target} ingredients={ingredients} />
+
           <MethodEditor steps={steps} setSteps={setSteps}>
             <Field
               label="Video to follow"
@@ -575,12 +683,9 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
           {/* price and running costs */}
           <section className="surface p-4 sm:p-5" aria-labelledby={`${ids}-money`}>
             <h2 id={`${ids}-money`} className="text-md font-semibold tracking-tight">
-              Price and running costs
+              Running costs and profit
             </h2>
             <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-5">
-              <Field label={`Selling price per ${unitName}`} error={errors.price} className="col-span-2 sm:col-span-1">
-                {(p) => <PesoInput {...p} value={v.price} onChange={(price) => set({ price })} />}
-              </Field>
               <Field label="Profit on cost" error={errors.target_margin} hint="What you add on top of the cost. 50% means price = cost × 1.5" className="col-span-2 sm:col-span-1">
                 {(p) => (
                   <span className="relative block">
@@ -611,8 +716,6 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
               {(p) => <Textarea {...p} value={v.notes} onChange={(e) => set({ notes: e.target.value })} rows={3} placeholder="Oven temperature, which pan, what customers ask for" />}
             </Field>
           </section>
-
-          <QuoteCalc className="lg:hidden" qty={quoteQty} setQty={setQuoteQty} cost={cost} price={orZero(payload.price)} yieldN={yieldN} unitName={unitName} />
 
           {formError ? (
             <p role="alert" className="rounded-[var(--radius-surface)] bg-rise-wash px-3 py-2 text-sm text-rise">
@@ -904,31 +1007,23 @@ const formatMinutes = (m: number) => (m < 60 ? `${m} min` : `${Math.floor(m / 60
 
 /* ---------- the price label ---------- */
 
-function PriceLabel({
-  cost,
-  price,
-  target,
-  unitName,
-  yieldN,
-  onUsePrice,
-}: {
-  cost: RecipeCost;
+interface VarietySummary {
+  key: string;
+  name: string;
   price: number;
-  target: number;
-  unitName: string;
-  yieldN: number;
-  onUsePrice: (p: number) => void;
-}) {
+  cost: number;
+  markup: number | null;
+}
+
+function PriceLabel({ cost, target, unitName, yieldN, varieties }: { cost: RecipeCost; target: number; unitName: string; yieldN: number; varieties: VarietySummary[] }) {
   const parts = [
     { label: "Ingredients", value: cost.ingredients },
     { label: "Labor", value: cost.labor },
     { label: "Utilities", value: cost.overhead },
   ];
-  const under = cost.markup !== null && cost.markup < target - 0.05;
-  const suggestedIsSet = cost.suggestedPrice > 0 && Math.abs(cost.suggestedPrice - price) < 0.005;
 
   return (
-    <section className="surface" aria-label="Price label">
+    <section className="surface" aria-label="Cost and prices">
       <div className="sep-b px-4 py-4 sm:px-5">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-2 rounded-[var(--radius-surface)] bg-accent-wash px-3 py-3" aria-live="polite">
           <span className="text-sm text-ink-2">
@@ -943,7 +1038,7 @@ function PriceLabel({
       </div>
 
       {/* batch cost breakdown */}
-      <div className="sep-b px-4 py-4 sm:px-5">
+      <div className="px-4 py-4 sm:px-5">
         <div className="flex items-baseline justify-between gap-3 text-sm">
           <span className="text-ink-2">Batch cost</span>
           <span className="figures font-semibold">{formatPeso(cost.batch)}</span>
@@ -970,113 +1065,315 @@ function PriceLabel({
         </ul>
       </div>
 
-      <dl className="sep-b grid grid-cols-[1fr_auto] items-baseline gap-x-4 gap-y-2.5 px-4 py-4 text-sm sm:px-5">
-        <dt className="text-ink-2">Selling price</dt>
-        <dd className="figures text-right font-medium">{price > 0 ? formatPeso(price) : <span className="text-ink-3">not set</span>}</dd>
-        <dt className="text-ink-2">Profit per {unitName}</dt>
-        <dd className="text-right">{price > 0 ? <ProfitFigure value={cost.profitPerUnit} /> : <span className="text-ink-3">—</span>}</dd>
-        <dt className="text-ink-2">Profit on cost</dt>
-        <dd className="figures flex items-center justify-end gap-2">
-          {under ? <MarginTag target={target} /> : null}
-          <span className="font-semibold">{cost.markup === null ? "—" : `${cost.markup.toFixed(1)}%`}</span>
-          <span className="text-xs text-ink-2">target {formatCount(target)}%</span>
-        </dd>
-        <dt className="text-ink-2">Share of the price</dt>
-        <dd className="figures text-right text-ink-2">{cost.margin === null ? "—" : `${cost.margin.toFixed(1)}%`}</dd>
-      </dl>
-
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-5">
-        <div className="min-w-0">
-          <p className="text-xs text-ink-2">Suggested price</p>
-          <p className="figures text-sm">
-            {cost.suggestedPrice > 0 ? (
-              <>
-                <span className="font-semibold">{formatPesoWhole(cost.suggestedPrice)}</span> = cost {formatPeso(cost.perUnit)} + {formatCount(target)}%
-              </>
-            ) : (
-              <span className="text-ink-3">Add ingredients or costs first</span>
-            )}
-          </p>
+      {/* every variety's price against its cost, in view while the ingredients change (phones see it in Varieties) */}
+      <div className="sep-t px-4 py-4 max-lg:hidden sm:px-5">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="text-sm font-medium">{varieties.length === 1 ? "Price" : "Prices"}</h2>
+          <span className="figures text-xs text-ink-2">target {formatCount(target)}% on cost</span>
         </div>
-        <Button size="sm" disabled={!(cost.suggestedPrice > 0) || suggestedIsSet} onClick={() => onUsePrice(cost.suggestedPrice)}>
-          {suggestedIsSet ? "Price is set to this" : "Use this price"}
-        </Button>
+        {varieties.length ? (
+          <ul className="mt-1.5" aria-live="polite">
+            {varieties.map((x) => {
+              const under = x.markup !== null && x.markup < target - 0.05;
+              return (
+                <li key={x.key} className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 border-t border-line py-2 first:border-t-0">
+                  <span className="min-w-0 truncate font-display font-semibold">{x.name}</span>
+                  <span className="figures text-right font-semibold">{x.price > 0 ? formatPeso(x.price) : <span className="font-normal text-ink-3">no price</span>}</span>
+                  <span className="figures text-xs text-ink-2">cost {formatPeso(x.cost)}</span>
+                  <span className="figures flex items-center justify-end gap-1.5 text-xs text-ink-2">
+                    {under ? <MarginTag target={target} /> : null}
+                    {x.markup === null ? "—" : `${x.markup.toFixed(0)}% on cost`}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="mt-1.5 text-sm text-ink-2">No prices yet. Add a variety to set what you sell it for.</p>
+        )}
       </div>
     </section>
   );
 }
 
-/* ---------- bulk quote ---------- */
+/* ---------- varieties: each way it's sold, with its own price ---------- */
 
-function QuoteCalc({
-  qty,
-  setQty,
-  cost,
-  price,
-  yieldN,
-  unitName,
-  className,
-}: {
-  qty: string;
-  setQty: (s: string) => void;
-  cost: RecipeCost;
+interface VarietyRow {
+  vs: VarietyState;
+  extras: { x: ExtraState; ing: Ingredient | undefined; qty: number; error?: string }[];
+  units: number;
   price: number;
-  yieldN: number;
+  err: { name?: string; units?: string; price?: string };
+  blank: boolean;
+  cost: { share: number; extras: number; total: number };
+  markup: number | null;
+  suggested: number;
+}
+
+function VarietiesEditor({
+  rows,
+  setVarieties,
+  unitName,
+  perUnit,
+  target,
+  ingredients,
+}: {
+  rows: VarietyRow[];
+  setVarieties: React.Dispatch<React.SetStateAction<VarietyState[]>>;
   unitName: string;
-  className?: string;
+  perUnit: number;
+  target: number;
+  ingredients: Ingredient[];
 }) {
-  const id = useId();
-  const n = num(qty);
-  const ok = Number.isFinite(n) && n > 0;
-  const rows: [string, ReactNode][] = ok
-    ? [
-        ["Total price", formatPeso(price * n)],
-        ["Total cost", formatPeso(cost.perUnit * n)],
-        ["Total profit", <ProfitFigure key="p" value={(price - cost.perUnit) * n} />],
-        ["Batches to bake", yieldN > 0 ? `${formatCount(Math.ceil(n / yieldN - 1e-9))}` : "—"],
-      ]
-    : [];
+  const ids = useId();
+  const seq = useRef(0);
+  const [focusId, setFocusId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!focusId) return;
+    document.getElementById(focusId)?.focus();
+    setFocusId(null);
+  }, [focusId]);
+
+  const patch = (key: string, p: Partial<VarietyState>) => setVarieties((vs) => vs.map((x) => (x.key === key ? { ...x, ...p } : x)));
+  const add = () => {
+    const key = `n${seq.current++}`;
+    setVarieties((vs) => [...vs, { key, id: newVarietyId(), name: "", units: "1", price: "", note: "", extras: [], open: false, touched: false }]);
+    setFocusId(`${ids}-name-${key}`);
+  };
+  const remove = (key: string) => setVarieties((vs) => vs.filter((x) => x.key !== key));
+  const patchExtras = (key: string, fn: (es: ExtraState[]) => ExtraState[]) => setVarieties((vs) => vs.map((x) => (x.key === key ? { ...x, extras: fn(x.extras) } : x)));
+  const addExtra = (key: string, ing: Ingredient) => {
+    const xk = `x${seq.current++}`;
+    patchExtras(key, (es) => [...es, { key: xk, ingredient_id: ing.id, text: "", touched: false, storedQty: null, fallback: ing.unit }]);
+    setFocusId(`${ids}-amt-${xk}`);
+  };
+  const sorted = useMemo(() => [...ingredients].sort((a, b) => a.name.localeCompare(b.name)), [ingredients]);
+  const kept = rows.filter((r) => !r.blank).length;
+
   return (
-    <section className={cx("surface px-4 py-4 sm:px-5", className)} aria-labelledby={`${id}-t`}>
-      <h2 id={`${id}-t`} className="text-md font-semibold tracking-tight">
-        Quote a bulk order
-      </h2>
-      <div className="mt-3 flex items-end gap-3">
-        <label htmlFor={`${id}-q`} className="min-w-0 flex-1">
-          <span className="text-sm font-medium">How many?</span>
-          <span className="relative mt-1.5 block">
-            <input
-              id={`${id}-q`}
-              inputMode="numeric"
-              value={qty}
-              onChange={(e) => setQty(e.target.value)}
-              placeholder="50"
-              className={inputCls("figures pr-24")}
-              autoComplete="off"
-            />
-            <span className="pointer-events-none absolute top-1/2 right-3 max-w-20 -translate-y-1/2 truncate text-sm text-ink-2" aria-hidden>
-              × {unitName}
-            </span>
-          </span>
-        </label>
-      </div>
-      {ok ? (
-        <dl className="mt-3 grid grid-cols-[1fr_auto] gap-x-4 gap-y-2 text-sm" aria-live="polite">
-          {rows.map(([k, val]) => (
-            <div key={k} className="contents">
-              <dt className="text-ink-2">{k}</dt>
-              <dd className="figures text-right font-medium">{val}</dd>
-            </div>
-          ))}
-          {yieldN > 0 && n % yieldN !== 0 ? (
-            <p className="col-span-2 text-xs text-ink-2">
-              {formatCount(Math.ceil(n / yieldN - 1e-9) * yieldN - n)} extra {unitName} left over from the last batch.
-            </p>
-          ) : null}
-        </dl>
+    <section id="varieties" className="surface scroll-mt-6" aria-labelledby={`${ids}-t`}>
+      <header className="sep-b px-4 pt-4 pb-3.5 sm:px-5">
+        <h2 id={`${ids}-t`} className="text-md font-semibold tracking-tight">
+          Varieties and prices
+        </h2>
+        <p className="mt-0.5 text-sm text-ink-2">
+          Each way you sell it: one {unitName}, a box of 6, a bigger size. These are the prices on your Price list and in the order picker.
+        </p>
+      </header>
+
+      {rows.length === 0 ? (
+        <p className="px-4 py-6 text-sm text-ink-2 sm:px-5">No prices yet, so this product isn&apos;t on the Price list. Add a variety to set one.</p>
       ) : (
-        <p className="mt-2 text-xs text-ink-2">Type a quantity to see the total price, cost, profit and how many batches to bake.</p>
+        <ul>
+          {rows.map((r) => {
+            const { vs } = r;
+            const label = vs.name.trim() || capital(unitName);
+            const err = vs.touched && !r.blank ? r.err : {};
+            const price = orZero(r.price);
+            const under = r.markup !== null && r.markup < target - 0.05;
+            const used = new Set(vs.extras.map((e) => e.ingredient_id));
+            const showSuggested = r.suggested > 0 && Math.abs(r.suggested - price) > 0.004;
+            const extrasNote = [
+              vs.extras.length ? `${vs.extras.length} extra ${vs.extras.length === 1 ? "item" : "items"} · ${formatPeso(r.cost.extras)}` : "Extra items",
+              vs.note.trim() ? `note: ${vs.note.trim()}` : "price list note",
+            ].join(" · ");
+            const fieldId = (f: string) => `${ids}-${f}-${vs.key}`;
+            const errP = (f: keyof VarietyRow["err"]) =>
+              err[f] ? (
+                <p id={fieldId(`${f}-err`)} className="mt-1 text-xs font-medium text-rise">
+                  {err[f]}
+                </p>
+              ) : null;
+            return (
+              <li key={vs.key} className="sep-b px-4 py-4 sm:px-5">
+                <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_2.75rem] items-start gap-x-3 gap-y-3 sm:grid-cols-[minmax(0,1fr)_8.5rem_8.5rem_2.75rem]">
+                  <div className="col-span-2 min-w-0 sm:col-span-1">
+                    <label htmlFor={fieldId("name")} className="text-xs font-medium text-ink-2">
+                      Name
+                    </label>
+                    <Input
+                      id={fieldId("name")}
+                      value={vs.name}
+                      onChange={(e) => patch(vs.key, { name: e.target.value })}
+                      placeholder={capital(unitName)}
+                      autoComplete="off"
+                      aria-invalid={err.name ? true : undefined}
+                      aria-describedby={err.name ? fieldId("name-err") : undefined}
+                      className="mt-1 font-display font-semibold"
+                    />
+                    {errP("name")}
+                  </div>
+                  <div className="col-start-1 row-start-2 min-w-0 sm:col-start-2 sm:row-start-1">
+                    <label htmlFor={fieldId("units")} className="text-xs font-medium text-ink-2">
+                      Size
+                    </label>
+                    <span className="relative mt-1 block">
+                      <Input
+                        id={fieldId("units")}
+                        inputMode="decimal"
+                        value={vs.units}
+                        onChange={(e) => patch(vs.key, { units: e.target.value })}
+                        placeholder="1"
+                        autoComplete="off"
+                        aria-invalid={err.units ? true : undefined}
+                        aria-describedby={err.units ? fieldId("units-err") : `${fieldId("units")}-unit`}
+                        className="figures pr-16"
+                      />
+                      <span id={`${fieldId("units")}-unit`} className="pointer-events-none absolute top-1/2 right-3 max-w-14 -translate-y-1/2 truncate text-sm text-ink-2">
+                        × {unitName}
+                      </span>
+                    </span>
+                    {errP("units")}
+                  </div>
+                  <div className="col-span-2 col-start-2 row-start-2 min-w-0 sm:col-span-1 sm:col-start-3 sm:row-start-1">
+                    <label htmlFor={fieldId("price")} className="text-xs font-medium text-ink-2">
+                      Price
+                    </label>
+                    <span className="mt-1 block">
+                      <PesoInput
+                        id={fieldId("price")}
+                        value={vs.price}
+                        onChange={(p) => patch(vs.key, { price: p })}
+                        aria-invalid={err.price ? true : undefined}
+                        aria-describedby={err.price ? fieldId("price-err") : undefined}
+                      />
+                    </span>
+                    {errP("price")}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => remove(vs.key)}
+                    aria-label={`Remove ${label}`}
+                    className="col-start-3 row-start-1 mt-5 grid size-11 place-items-center rounded-[var(--radius-surface)] text-ink-3 hover:bg-surface-2 hover:text-rise sm:col-start-4"
+                  >
+                    <X className="size-4" aria-hidden />
+                  </button>
+                </div>
+
+                {/* what this variety costs, against its price */}
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-[8px] bg-surface-2 px-3 py-2 text-sm" aria-live="polite">
+                  <span className="figures">
+                    <span className="text-ink-2">Cost </span>
+                    <span className="font-semibold">{formatPeso(r.cost.total)}</span>
+                  </span>
+                  {price > 0 && r.cost.total > 0 ? (
+                    <>
+                      <ProfitFigure value={price - r.cost.total} />
+                      <span className="figures flex items-center gap-1.5 text-ink-2">
+                        {under ? <MarginTag target={target} /> : null}
+                        {r.markup === null ? "" : `${r.markup.toFixed(0)}% on cost`}
+                      </span>
+                    </>
+                  ) : null}
+                  {showSuggested ? (
+                    <button
+                      type="button"
+                      onClick={() => patch(vs.key, { price: String(r.suggested) })}
+                      className="figures -my-1 ml-auto inline-flex min-h-11 items-center rounded-[var(--radius-surface)] px-2 text-sm font-medium text-ink underline-offset-4 hover:bg-accent-wash lg:min-h-9"
+                    >
+                      Use {formatPesoWhole(r.suggested)}
+                      <span className="ml-1 font-normal text-ink-2">cost + {formatCount(target)}%</span>
+                    </button>
+                  ) : null}
+                </div>
+                <p className="figures mt-1 text-xs text-ink-2">
+                  {formatCount(orZero(r.units))} × {formatPeso(perUnit)} per {unitName}
+                  {r.cost.extras > 0 ? ` + ${formatPeso(r.cost.extras)} extras` : ""}
+                </p>
+
+                <button
+                  type="button"
+                  aria-expanded={vs.open}
+                  aria-controls={fieldId("more")}
+                  onClick={() => patch(vs.key, { open: !vs.open })}
+                  className="-ml-2 mt-1 inline-flex min-h-11 max-w-full items-center gap-1.5 rounded-[var(--radius-surface)] px-2 text-left text-sm font-medium text-ink-2 hover:text-ink lg:min-h-9"
+                >
+                  <ChevronDown className={cx("size-4 shrink-0 transition-transform duration-150", vs.open && "rotate-180")} aria-hidden />
+                  <span className="min-w-0 truncate">{extrasNote}</span>
+                </button>
+
+                {vs.open ? (
+                  <div id={fieldId("more")} className="mt-1 flex flex-col gap-3 border-t border-line pt-3">
+                    <p className="text-xs text-ink-2">Pantry items only this variety uses, for one sold: its frosting, a gift box, a candle.</p>
+                    {r.extras.length ? (
+                      <ul className="flex flex-col gap-2">
+                        {r.extras.map(({ x, ing, qty, error }) => {
+                          const name = ing?.name ?? "Removed item";
+                          const showError = error && x.touched;
+                          return (
+                            <li key={x.key} className="grid grid-cols-[minmax(0,1fr)_7rem_2.75rem] items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(0,1fr)_8.5rem_6.5rem_2.75rem]">
+                              <div className="min-w-0">
+                                <p className={cx("truncate font-display font-semibold", !ing && "text-rise")}>{name}</p>
+                                <p className="figures text-xs text-ink-2">{ing ? formatCpu(ing.cost_per_unit, ing.unit) : "Not in the pantry any more"}</p>
+                              </div>
+                              <div>
+                                <label htmlFor={`${ids}-amt-${x.key}`} className="sr-only">
+                                  Amount of {name} for one {label}
+                                </label>
+                                <input
+                                  id={`${ids}-amt-${x.key}`}
+                                  value={ing ? x.text : formatQty(qty, "g")}
+                                  disabled={!ing}
+                                  onChange={(e) => patchExtras(vs.key, (es) => es.map((y) => (y.key === x.key ? { ...y, text: e.target.value } : y)))}
+                                  onBlur={() => patchExtras(vs.key, (es) => es.map((y) => (y.key === x.key ? { ...y, touched: true } : y)))}
+                                  placeholder={ing ? (ing.unit === "pc" ? "1 pc" : ing.unit === "g" ? "50 g" : "50 ml") : ""}
+                                  autoComplete="off"
+                                  aria-invalid={showError ? true : undefined}
+                                  aria-describedby={showError ? `${ids}-amt-err-${x.key}` : undefined}
+                                  className={inputCls("figures text-right")}
+                                />
+                              </div>
+                              <span className="figures hidden text-right text-sm font-semibold sm:block">{formatPeso((ing?.cost_per_unit ?? 0) * qty)}</span>
+                              <button
+                                type="button"
+                                onClick={() => patchExtras(vs.key, (es) => es.filter((y) => y.key !== x.key))}
+                                aria-label={`Remove ${name} from ${label}`}
+                                className="grid size-11 place-items-center rounded-[var(--radius-surface)] text-ink-3 hover:bg-surface-2 hover:text-rise"
+                              >
+                                <X className="size-4" aria-hidden />
+                              </button>
+                              {showError ? (
+                                <p id={`${ids}-amt-err-${x.key}`} className="col-span-full text-xs font-medium text-rise">
+                                  {error}
+                                </p>
+                              ) : null}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    ) : null}
+                    <Combobox
+                      label={`Add an extra item to ${label}`}
+                      placeholder="Add an extra: search the pantry"
+                      options={sorted.filter((i) => !used.has(i.id))}
+                      getKey={(i) => i.id}
+                      match={(i, needle) => i.name.toLowerCase().includes(needle)}
+                      onPick={(i) => addExtra(vs.key, i)}
+                      empty="No pantry item matches. Add it on the Inventory page first."
+                      render={(i) => (
+                        <span className="flex items-center justify-between gap-3">
+                          <span className="truncate font-display font-semibold">{i.name}</span>
+                          <span className="figures shrink-0 text-sm text-ink-2">{formatCpu(i.cost_per_unit, i.unit)}</span>
+                        </span>
+                      )}
+                    />
+                    <Field label="Price list note" optional hint="Shown beside the price, like save ₱50">
+                      {(p) => <Input {...p} value={vs.note} onChange={(e) => patch(vs.key, { note: e.target.value })} maxLength={80} autoComplete="off" placeholder="save ₱50" />}
+                    </Field>
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
       )}
+
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-b-[var(--radius-surface)] bg-surface-2 px-4 py-3 sm:px-5">
+        <span className="figures text-sm text-ink-2">{kept ? `${kept} ${kept === 1 ? "variety" : "varieties"} on the Price list` : "Not on the Price list yet"}</span>
+        <Button onClick={add} size="sm">
+          <Plus aria-hidden /> Add variety
+        </Button>
+      </div>
     </section>
   );
 }

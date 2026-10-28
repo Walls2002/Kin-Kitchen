@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { deleteOrder, restoreOrder, saveOrder, saveSketch } from "@/lib/biz-actions";
-import { addDays, orderTotals, recipeCost } from "@/lib/biz";
+import { addDays, orderTotals, recipeCost, sellName, sellOptions, varietyCost, varietyOf, type SellOption } from "@/lib/biz";
 import { formatCount, formatDayWeek, formatPeso, formatPesoSigned, relativeDay } from "@/lib/format";
 import { orderSchema, type OrderInput } from "@/lib/schemas";
 import { ORDER_STATUSES, PAYMENT_METHODS, SALES_CHANNELS, type Ingredient, type Order, type OrderStatus, type PaymentMethod, type Recipe } from "@/lib/types";
@@ -31,6 +31,7 @@ interface Props {
 interface ItemState {
   key: string;
   recipe_id: string | null;
+  variety_id: string | null;
   name: string;
   qty: string;
   unit_price: string;
@@ -56,8 +57,13 @@ export function OrderForm({ order, recipes, ingredients, customers, now, aside }
   const [pending, start] = useTransition();
   const ingById = useMemo(() => new Map(ingredients.map((i) => [i.id, i])), [ingredients]);
   const recipeById = useMemo(() => new Map(recipes.map((r) => [r.id, r])), [recipes]);
+  // Every price on the Price list is one pick: Fudgy Brownies · Box of 6 and · Box of 12 are separate options.
   const menu = useMemo(
-    () => recipes.filter((r) => r.active).sort((a, b) => (a.group ?? "~").localeCompare(b.group ?? "~") || a.name.localeCompare(b.name)),
+    () =>
+      recipes
+        .filter((r) => r.active)
+        .sort((a, b) => (a.group ?? "~").localeCompare(b.group ?? "~") || a.name.localeCompare(b.name))
+        .flatMap((r) => sellOptions(r).map((o) => ({ r, o, key: `${r.id}:${o.variety_id ?? "unit"}` }))),
     [recipes],
   );
 
@@ -82,7 +88,7 @@ export function OrderForm({ order, recipes, ingredients, customers, now, aside }
     setStatus(order.status);
   }
   const [items, setItems] = useState<ItemState[]>(() =>
-    (order?.items ?? []).map((i, n) => ({ key: `s${n}`, recipe_id: i.recipe_id, name: i.name, qty: show(i.qty), unit_price: show(i.unit_price), unit_cost: i.unit_cost })),
+    (order?.items ?? []).map((i, n) => ({ key: `s${n}`, recipe_id: i.recipe_id, variety_id: i.variety_id ?? null, name: i.name, qty: show(i.qty), unit_price: show(i.unit_price), unit_cost: i.unit_cost })),
   );
   const [payments, setPayments] = useState<PayState[]>(() => (order?.payments ?? []).map((p) => ({ id: p.id, amount: show(p.amount), date: p.date, method: p.method })));
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -103,21 +109,22 @@ export function OrderForm({ order, recipes, ingredients, customers, now, aside }
 
   /* ---------- items ---------- */
 
-  const addRecipe = (r: Recipe) => {
-    const existing = items.find((i) => i.recipe_id === r.id);
+  const addRecipe = ({ r, o }: { r: Recipe; o: SellOption }) => {
+    const existing = items.find((i) => i.recipe_id === r.id && (i.variety_id ?? null) === o.variety_id);
     if (existing) {
       setItems((all) => all.map((i) => (i.key === existing.key ? { ...i, qty: show(orZero(num(i.qty)) + 1) } : i)));
     } else {
+      const unitCost = varietyCost(o, recipeCost(r, ingById).perUnit, ingById).total;
       setItems((all) => [
         ...all,
-        { key: nextKey(), recipe_id: r.id, name: r.name, qty: "1", unit_price: show(r.price), unit_cost: round2(recipeCost(r, ingById).perUnit) },
+        { key: nextKey(), recipe_id: r.id, variety_id: o.variety_id, name: sellName(r, o), qty: "1", unit_price: show(o.price), unit_cost: round2(unitCost) },
       ]);
     }
     clear("items");
   };
   const addCustom = (name: string) => {
     const key = nextKey();
-    setItems((all) => [...all, { key, recipe_id: null, name, qty: "1", unit_price: "", unit_cost: 0 }]);
+    setItems((all) => [...all, { key, recipe_id: null, variety_id: null, name, qty: "1", unit_price: "", unit_cost: 0 }]);
     clear("items");
     requestAnimationFrame(() => nameRefs.current.get(key)?.focus());
   };
@@ -140,7 +147,7 @@ export function OrderForm({ order, recipes, ingredients, customers, now, aside }
     order_date: v.order_date,
     due_date: v.due_date,
     status,
-    items: items.map((i) => ({ recipe_id: i.recipe_id, name: i.name, qty: num(i.qty), unit_price: num(i.unit_price), unit_cost: i.unit_cost })),
+    items: items.map((i) => ({ recipe_id: i.recipe_id, variety_id: i.variety_id, name: i.name, qty: num(i.qty), unit_price: num(i.unit_price), unit_cost: i.unit_cost })),
     delivery_fee: v.delivery_fee.trim() === "" ? 0 : num(v.delivery_fee),
     discount: v.discount.trim() === "" ? 0 : num(v.discount),
     payments: payments.map((p) => ({ id: p.id, amount: num(p.amount), date: p.date, method: p.method })),
@@ -335,20 +342,20 @@ export function OrderForm({ order, recipes, ingredients, customers, now, aside }
                 label="Add an item"
                 placeholder="Add an item: search your recipes"
                 options={menu}
-                getKey={(r) => r.id}
-                match={(r, needle) => r.name.toLowerCase().includes(needle) || (r.group ?? "").toLowerCase().includes(needle)}
+                getKey={(m) => m.key}
+                match={({ r, o }, needle) => r.name.toLowerCase().includes(needle) || o.label.toLowerCase().includes(needle) || (r.group ?? "").toLowerCase().includes(needle)}
                 onPick={addRecipe}
                 extra={{ label: "Custom item", onPick: addCustom }}
-                render={(r) => (
+                render={({ r, o }) => (
                   <span className="flex items-center justify-between gap-3">
                     <span className="min-w-0">
                       <span className="block truncate font-display font-semibold">{r.name}</span>
                       <span className="block truncate text-xs text-ink-2">
-                        {r.yield_label}
+                        {o.label}
                         {r.group ? ` · ${r.group}` : ""}
                       </span>
                     </span>
-                    <span className="figures shrink-0 text-sm font-medium">{formatPeso(r.price)}</span>
+                    <span className="figures shrink-0 text-sm font-medium">{o.price > 0 ? formatPeso(o.price) : "no price"}</span>
                   </span>
                 )}
               />
@@ -373,7 +380,7 @@ export function OrderForm({ order, recipes, ingredients, customers, now, aside }
                           <>
                             <p className="font-display font-semibold [overflow-wrap:anywhere]">{it.name}</p>
                             <p className="text-xs text-ink-2">
-                              {r ? `per ${r.yield_label}` : "Recipe was deleted"} · cost {formatPeso(it.unit_cost)} each
+                              {r ? (varietyOf(r, it.variety_id)?.name ?? `per ${r.yield_label}`) : "Recipe was deleted"} · cost {formatPeso(it.unit_cost)} each
                             </p>
                             {order && r && order.status !== "done" && order.status !== "cancelled" ? (
                               <Link
