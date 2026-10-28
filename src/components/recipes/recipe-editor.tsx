@@ -10,6 +10,7 @@ import { formatCpu, formatCount, formatPeso, formatPesoWhole, formatQty } from "
 import { fieldErrors, recipeSchema, webLink, type RecipeInput } from "@/lib/schemas";
 import { isLow, type EntryUnit, type Ingredient, type Recipe, type RecipeLine, type RecipeStep, type Unit } from "@/lib/types";
 import { baseOf, displayUnitFor, factor, parseAmount } from "@/lib/units";
+import { BakeButton, BakeChooser } from "../bake/bake-chooser";
 import { Sheet } from "../sheet";
 import { useToast } from "../toast";
 import { Button, Field, Input, Textarea, buttonClass, cx } from "../ui";
@@ -224,6 +225,7 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
     return () => cancelAnimationFrame(raf);
   }, [reveal]);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [bakeOpen, setBakeOpen] = useState(false);
   const amountRefs = useRef(new Map<string, HTMLInputElement>());
   const [focusKey, setFocusKey] = useState<string | null>(null);
   useEffect(() => {
@@ -446,15 +448,22 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
         {recipe ? (
           <div className="flex w-full flex-col gap-1.5 sm:w-auto sm:items-end">
             {dirty ? (
-              <Button variant="primary" size="lg" busy={pending} onClick={() => submit(undefined, () => router.push(`/bake/${recipe.id}`))} className="h-14! w-full px-6! sm:w-auto">
+              <Button
+                variant="primary"
+                size="lg"
+                busy={pending}
+                // Saved first; a product that sells several ways then asks what's being baked.
+                onClick={() => submit(undefined, () => (payload.varieties.length > 1 ? setBakeOpen(true) : router.push(`/bake/${recipe.id}`)))}
+                className="h-14! w-full px-6! sm:w-auto"
+              >
                 <ChefHat aria-hidden />
                 Save and start baking
               </Button>
             ) : (
-              <Link href={`/bake/${recipe.id}`} className={buttonClass("primary", "lg", "h-14! w-full px-6! sm:w-auto")}>
+              <BakeButton recipe={recipe} className={buttonClass("primary", "lg", "h-14! w-full px-6! sm:w-auto")}>
                 <ChefHat aria-hidden />
                 Start baking
-              </Link>
+              </BakeButton>
             )}
             <p className="text-xs text-ink-2 sm:text-right">
               {recipe.steps.length
@@ -744,6 +753,14 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
       </div>
 
       {recipe ? (
+        <BakeChooser
+          recipe={{ id: recipe.id, name: payload.name || recipe.name, yield_qty: orZero(payload.yield_qty), yield_label: payload.yield_label, varieties: payload.varieties }}
+          open={bakeOpen}
+          onClose={() => setBakeOpen(false)}
+        />
+      ) : null}
+
+      {recipe ? (
         <Sheet
           open={confirmDelete}
           onClose={() => setConfirmDelete(false)}
@@ -1015,32 +1032,86 @@ interface VarietySummary {
   markup: number | null;
 }
 
+/**
+ * The cost card. A product that sells several ways leads with what each variety costs against
+ * its price, since one "cost per unit" can't speak for a box of 6 and a 6x2 cake at once; the
+ * batch it all comes from sits underneath.
+ */
 function PriceLabel({ cost, target, unitName, yieldN, varieties }: { cost: RecipeCost; target: number; unitName: string; yieldN: number; varieties: VarietySummary[] }) {
   const parts = [
     { label: "Ingredients", value: cost.ingredients },
     { label: "Labor", value: cost.labor },
     { label: "Utilities", value: cost.overhead },
   ];
+  const removed = cost.missing ? <p className="mt-2 text-xs text-rise">Leaves out {cost.missing} removed ingredient{cost.missing === 1 ? "" : "s"}, so costs read low.</p> : null;
 
   return (
     <section className="surface" aria-label="Cost and prices">
-      <div className="sep-b px-4 py-4 sm:px-5">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-2 rounded-[var(--radius-surface)] bg-accent-wash px-3 py-3" aria-live="polite">
-          <span className="text-sm text-ink-2">
-            Cost per <span className="font-medium text-ink">{unitName}</span>
-          </span>
-          <span className="figures text-2xl font-semibold tracking-tight text-ink">{formatPeso(cost.perUnit)}</span>
+      {varieties.length ? (
+        <div className="sep-b px-4 pt-4 pb-3 sm:px-5" aria-live="polite">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="text-md font-semibold tracking-tight">{varieties.length === 1 ? "Cost and price" : "Cost of each variety"}</h2>
+            <span className="figures text-xs text-ink-2">target {formatCount(target)}% on cost</span>
+          </div>
+          <table className="mt-2 w-full border-separate border-spacing-0 text-sm">
+            <thead>
+              <tr className="text-xs text-ink-2">
+                <th scope="col" className="pb-1.5 text-left font-medium">
+                  Variety
+                </th>
+                <th scope="col" className="pb-1.5 pl-2 text-right font-medium">
+                  Cost
+                </th>
+                <th scope="col" className="pb-1.5 pl-2 text-right font-medium">
+                  Price
+                </th>
+                <th scope="col" className="pb-1.5 pl-2 text-right font-medium">
+                  On cost
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {varieties.map((x) => {
+                const under = x.markup !== null && x.markup < target - 0.05;
+                return (
+                  <tr key={x.key}>
+                    <th scope="row" className="border-t border-line py-2.5 pr-2 text-left align-top font-normal">
+                      <span className="block font-display font-semibold [overflow-wrap:anywhere]">{x.name}</span>
+                      {x.price > 0 && x.cost > 0 ? <ProfitFigure value={x.price - x.cost} className="text-xs" /> : null}
+                    </th>
+                    <td className="figures border-t border-line py-2.5 pl-2 text-right align-top whitespace-nowrap">{formatPeso(x.cost)}</td>
+                    <td className="figures border-t border-line py-2.5 pl-2 text-right align-top font-semibold whitespace-nowrap">
+                      {x.price > 0 ? formatPeso(x.price) : <span className="font-normal text-ink-3">—</span>}
+                    </td>
+                    <td className={cx("figures border-t border-line py-2.5 pl-2 text-right align-top whitespace-nowrap", under ? "font-semibold text-rise" : "text-ink-2")}>
+                      {x.markup === null ? "—" : `${x.markup.toFixed(0)}%`}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {removed}
         </div>
-        <p className="figures mt-2 text-xs text-ink-2">
-          {yieldN > 0 ? `Batch cost ${formatPeso(cost.batch)} ÷ ${formatCount(yieldN)} ${yieldN === 1 ? "unit" : "units"}` : "Enter how many units one batch makes"}
-          {cost.missing ? <span className="text-rise"> · leaves out {cost.missing} removed ingredient{cost.missing === 1 ? "" : "s"}</span> : null}
-        </p>
-      </div>
+      ) : (
+        <div className="sep-b px-4 py-4 sm:px-5">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-2 rounded-[var(--radius-surface)] bg-accent-wash px-3 py-3" aria-live="polite">
+            <span className="text-sm text-ink-2">
+              Cost per <span className="font-medium text-ink">{unitName}</span>
+            </span>
+            <span className="figures text-2xl font-semibold tracking-tight text-ink">{formatPeso(cost.perUnit)}</span>
+          </div>
+          <p className="mt-2 text-sm text-ink-2">Add a variety below to set what you sell it for.</p>
+          {removed}
+        </div>
+      )}
 
-      {/* batch cost breakdown */}
+      {/* the batch every variety comes from */}
       <div className="px-4 py-4 sm:px-5">
         <div className="flex items-baseline justify-between gap-3 text-sm">
-          <span className="text-ink-2">Batch cost</span>
+          <span className="text-ink-2">
+            One batch{yieldN > 0 ? <span className="figures"> · makes {formatCount(yieldN)} {unitName}</span> : null}
+          </span>
           <span className="figures font-semibold">{formatPeso(cost.batch)}</span>
         </div>
         <div className="mt-2.5 flex h-2.5 gap-[2px] overflow-hidden rounded-full bg-surface" role="img" aria-label={parts.map((p) => `${p.label} ${formatPeso(p.value)}`).join(", ")}>
@@ -1063,33 +1134,12 @@ function PriceLabel({ cost, target, unitName, yieldN, varieties }: { cost: Recip
             </li>
           ))}
         </ul>
-      </div>
-
-      {/* every variety's price against its cost, in view while the ingredients change (phones see it in Varieties) */}
-      <div className="sep-t px-4 py-4 max-lg:hidden sm:px-5">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-sm font-medium">{varieties.length === 1 ? "Price" : "Prices"}</h2>
-          <span className="figures text-xs text-ink-2">target {formatCount(target)}% on cost</span>
-        </div>
-        {varieties.length ? (
-          <ul className="mt-1.5" aria-live="polite">
-            {varieties.map((x) => {
-              const under = x.markup !== null && x.markup < target - 0.05;
-              return (
-                <li key={x.key} className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 border-t border-line py-2 first:border-t-0">
-                  <span className="min-w-0 truncate font-display font-semibold">{x.name}</span>
-                  <span className="figures text-right font-semibold">{x.price > 0 ? formatPeso(x.price) : <span className="font-normal text-ink-3">no price</span>}</span>
-                  <span className="figures text-xs text-ink-2">cost {formatPeso(x.cost)}</span>
-                  <span className="figures flex items-center justify-end gap-1.5 text-xs text-ink-2">
-                    {under ? <MarginTag target={target} /> : null}
-                    {x.markup === null ? "—" : `${x.markup.toFixed(0)}% on cost`}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <p className="mt-1.5 text-sm text-ink-2">No prices yet. Add a variety to set what you sell it for.</p>
+        {varieties.length && yieldN > 0 ? (
+          <p className="figures mt-3 border-t border-line pt-2.5 text-xs text-ink-2">
+            {formatPeso(cost.batch)} ÷ {formatCount(yieldN)} = <span className="font-semibold text-ink">{formatPeso(cost.perUnit)}</span> per {unitName}, before any variety&apos;s extras
+          </p>
+        ) : yieldN > 0 ? null : (
+          <p className="mt-3 text-xs text-ink-2">Enter how many units one batch makes.</p>
         )}
       </div>
     </section>

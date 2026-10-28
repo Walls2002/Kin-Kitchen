@@ -26,6 +26,7 @@ import {
   type SavedBake,
   type StepTimer,
 } from "./timers";
+import { BakeButton } from "./bake-chooser";
 import { useWakeLock } from "./use-wake-lock";
 import { bakeHref, bakedKeys, markBaked, nextBake, type BakeQueueItem } from "./queue";
 import { setOrderStatus } from "@/lib/biz-actions";
@@ -52,12 +53,15 @@ export function BakeMode({
   order,
   sketches,
   queue = [],
+  amount = null,
 }: {
   recipe: Recipe;
   ingredients: BakeIngredient[];
   order: BakeOrder | null;
   sketches: Sketch[];
   queue?: BakeQueueItem[];
+  /** What's being baked when it isn't one full batch: "2 × Box of 6". */
+  amount?: string | null;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -330,7 +334,7 @@ export function BakeMode({
   const lit = useMemo(() => (current ? mentionedIds(current.text, ingredients) : EMPTY), [current, ingredients]);
   const stepTimer = phase === "step" ? timers.find((t) => t.step === step) : undefined;
   const makes = `Makes ${makesText(recipe.yield_qty, recipe.yield_label)}`;
-  const context = order ? `#${order.number} · ${order.customer}, due ${order.due}` : `One batch · ${makes.toLowerCase()}`;
+  const context = order ? `#${order.number} · ${order.customer}, due ${order.due}` : amount ?? `One batch · ${makes.toLowerCase()}`;
   const hasDesign = sketches.length > 0;
   const announce =
     phase === "step" && current ? `Step ${step + 1} of ${total}. ${current.text}` : phase === "done" ? "All steps done." : `Get ready to bake ${recipe.name}.`;
@@ -408,6 +412,7 @@ export function BakeMode({
             <ReadyCard
               recipe={recipe}
               makes={makes}
+              amount={amount}
               total={total}
               timedMinutes={timedMinutes}
               resume={resume}
@@ -608,6 +613,7 @@ function linkHost(url: string) {
 function ReadyCard({
   recipe,
   makes,
+  amount,
   total,
   timedMinutes,
   resume,
@@ -618,6 +624,7 @@ function ReadyCard({
 }: {
   recipe: Recipe;
   makes: string;
+  amount: string | null;
   total: number;
   timedMinutes: number;
   resume: SavedBake | null;
@@ -629,7 +636,23 @@ function ReadyCard({
   return (
     <div className={cx(dir === "prev" ? "bake-in-prev" : undefined, "flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pt-4 pb-5 sm:px-6 sm:pt-6 lg:px-8 lg:pt-8")}>
       <h2 className="font-display text-[clamp(1.75rem,1.3rem+2vw,2.75rem)] leading-[1.1] font-semibold tracking-[-0.02em] text-balance [@media(orientation:landscape)_and_(max-height:520px)]:text-[1.75rem]">{recipe.name}</h2>
-      <p className="mt-2 text-md text-ink-2 lg:text-lg">{makes}, one batch as written</p>
+      <p className="mt-2 text-md text-ink-2 lg:text-lg">
+        {amount ? (
+          <>
+            <span className="font-semibold text-ink">{amount}</span>. The ingredients are measured for that; the steps are written for one full batch.
+          </>
+        ) : (
+          `${makes}, one batch as written`
+        )}
+      </p>
+      {!order && recipe.varieties.length > 1 ? (
+        <BakeButton
+          recipe={recipe}
+          className="-ml-2 mt-1 inline-flex min-h-11 items-center gap-1.5 self-start rounded-[var(--radius-surface)] px-2 text-base font-medium text-ink-2 underline-offset-4 hover:bg-surface-2 hover:text-ink"
+        >
+          Bake something else
+        </BakeButton>
+      ) : null}
 
       {total ? (
         <ul className="mt-4 flex flex-wrap gap-2 text-base">

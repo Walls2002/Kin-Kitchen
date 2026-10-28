@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { recipeCost, sellOptions, varietyCost } from "@/lib/biz";
 import type { Ingredient, Recipe } from "@/lib/types";
 import { ButtonLink, Select, cx } from "../ui";
+import { BakeButton } from "../bake/bake-chooser";
 import { MarginTag } from "./marks";
 
 interface Row {
@@ -192,15 +193,15 @@ export function RecipesSheet({ recipes, ingredients }: { recipes: Recipe[]; ingr
                           <Pencil className="size-4" aria-hidden />
                           <span className="max-sm:hidden">Edit</span>
                         </Link>
-                        <Link
-                          href={`/bake/${r.id}`}
+                        <BakeButton
+                          recipe={r}
                           aria-label={`Bake ${r.name}`}
                           title={r.steps.length ? `Bake ${r.name}, step by step` : `Bake ${r.name}: ingredients only, no steps yet`}
                           className="inline-flex h-11 items-center justify-center gap-1.5 rounded-[var(--radius-surface)] px-3 font-medium text-ink-2 hover:bg-accent-wash hover:text-ink max-sm:w-11 max-sm:px-0 lg:h-9"
                         >
                           <ChefHat className="size-4" aria-hidden />
                           <span className="max-sm:hidden">Bake</span>
-                        </Link>
+                        </BakeButton>
                       </div>
                     </td>
                   </tr>

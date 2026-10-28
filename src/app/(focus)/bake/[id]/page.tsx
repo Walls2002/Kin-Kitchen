@@ -2,14 +2,16 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BakeMode, type BakeIngredient, type BakeOrder } from "@/components/bake/bake-mode";
 import type { BakeQueueItem } from "@/components/bake/queue";
-import { today } from "@/lib/biz";
+import { today, varietyOf } from "@/lib/biz";
 import { getRepo } from "@/lib/data";
 import { relativeDay } from "@/lib/format";
 import { isLow, type OrderItem, type Sketch } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ order?: string | string[] }> };
+type Param = string | string[] | undefined;
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ order?: Param; v?: Param; n?: Param }> };
+const one = (p: Param) => (Array.isArray(p) ? p[0] : p);
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
@@ -30,19 +32,29 @@ function dueText(due: string, now: string) {
 
 export default async function BakePage({ params, searchParams }: Props) {
   const { id } = await params;
-  const { order: orderParam } = await searchParams;
-  const orderId = Array.isArray(orderParam) ? orderParam[0] : orderParam;
+  const sp = await searchParams;
+  const orderId = one(sp.order);
 
   const repo = await getRepo();
   const [recipe, pantry] = await Promise.all([repo.recipes.get(id), repo.listIngredients()]);
   if (!recipe) notFound();
 
+  // Baking a variety (?v=…&n=…): the batch scaled to what it needs, plus its own extras.
+  const variety = orderId ? undefined : varietyOf(recipe, one(sp.v));
+  const count = Math.min(999, Math.max(1, Math.round(Number(one(sp.n)) || 1)));
+  const scale = variety && recipe.yield_qty > 0 ? (variety.units * count) / recipe.yield_qty : 1;
+  const need = new Map<string, number>();
+  for (const l of recipe.lines) need.set(l.ingredient_id, (need.get(l.ingredient_id) ?? 0) + l.qty * scale);
+  for (const l of variety?.extras ?? []) need.set(l.ingredient_id, (need.get(l.ingredient_id) ?? 0) + l.qty * count);
+  const amount = variety ? `${count} × ${variety.name}` : null;
+
   const byId = new Map(pantry.map((i) => [i.id, i]));
-  const ingredients: BakeIngredient[] = recipe.lines.map((l) => {
-    const ing = byId.get(l.ingredient_id);
+  const ingredients: BakeIngredient[] = Array.from(need, ([id, raw]) => {
+    const qty = Math.round(raw * 100) / 100;
+    const ing = byId.get(id);
     return ing
-      ? { id: ing.id, name: ing.name, unit: ing.unit, qty: l.qty, low: isLow(ing), missing: false }
-      : { id: l.ingredient_id, name: "Removed ingredient", unit: "g", qty: l.qty, low: false, missing: true };
+      ? { id: ing.id, name: ing.name, unit: ing.unit, qty, low: isLow(ing), missing: false }
+      : { id, name: "Removed ingredient", unit: "g" as const, qty, low: false, missing: true };
   });
 
   let order: BakeOrder | null = null;
@@ -80,7 +92,7 @@ export default async function BakePage({ params, searchParams }: Props) {
     );
 
   // Keyed by recipe and order, so moving to the next bake always starts it fresh.
-  return <BakeMode key={`${id}:${orderId ?? ""}`} recipe={recipe} ingredients={ingredients} order={order} sketches={sketches} queue={queue} />;
+  return <BakeMode key={`${id}:${orderId ?? ""}:${amount ?? ""}`} recipe={recipe} ingredients={ingredients} order={order} sketches={sketches} queue={queue} amount={amount} />;
 }
 
 /**
