@@ -51,7 +51,7 @@ export const NAV: { group: string | null; items: NavItem[] }[] = [
     group: "Sell",
     items: [
       { href: "/orders", label: "Orders", icon: ClipboardList, blurb: "Every order, payment and due date" },
-      { href: "/price-list", label: "Price list", icon: Tag, blurb: "Every product's prices in one list, ready to copy" },
+      { href: "/price-list", label: "Price list", icon: Tag, blurb: "Every product's prices in one list, ready to edit" },
       { href: "/recipes", label: "Recipes", icon: BookOpenText, blurb: "Ingredients, steps, the cost of each variety, and Bake mode" },
       { href: "/designs", label: "Cake designs", icon: Palette, blurb: "Sketch a customer's cake and keep every design" },
     ],

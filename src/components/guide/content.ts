@@ -240,8 +240,8 @@ export const CHAPTERS: Chapter[] = [
         title: "See every price at once",
         steps: [
           "Open **Price list** under Sell. It lists every variety of every product on the menu, grouped like your recipes.",
-          "Tap **Copy as text** to paste the whole list into Messenger or a post.",
-          "To change a price, open the recipe and edit it under Varieties and prices.",
+          "Tap **Edit** on a row to change its variety name, price or note, then **Save price**. That price is used in the recipe and on new orders.",
+          "To add a size, like a box of 12, open the product in Recipes and add it under Varieties and prices.",
         ],
       },
       {

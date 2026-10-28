@@ -1,11 +1,11 @@
 "use client";
 
-import { ChefHat, ChevronRight, Search, TriangleAlert, X } from "@/components/icons";
+import { ChefHat, Pencil, Search, TriangleAlert, X } from "@/components/icons";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { recipeCost, sellOptions, varietyCost } from "@/lib/biz";
 import type { Ingredient, Recipe } from "@/lib/types";
-import { ButtonLink, Select } from "../ui";
+import { ButtonLink, Select, cx } from "../ui";
 import { MarginTag } from "./marks";
 
 interface Row {
@@ -18,8 +18,8 @@ interface Row {
 }
 
 /**
- * One line per product: the name, the varieties it sells as, and a way into Bake mode.
- * Prices live on the Price list and costs inside each recipe, so this list stays a list.
+ * One row per product: the name, the varieties it sells as, and Edit and Bake. Prices live on
+ * the Price list and costs inside each recipe, so this table stays short.
  */
 export function RecipesSheet({ recipes, ingredients }: { recipes: Recipe[]; ingredients: Ingredient[] }) {
   const [q, setQ] = useState("");
@@ -60,7 +60,10 @@ export function RecipesSheet({ recipes, ingredients }: { recipes: Recipe[]; ingr
     }
     return Array.from(byGroup).sort(([a], [b]) => (a === "No group" ? 1 : b === "No group" ? -1 : a.localeCompare(b)));
   }, [all, q, group]);
-  const count = shown.reduce((s, [, rows]) => s + rows.length, 0);
+  // Group order, flattened: the group now shows under each name instead of as a heading.
+  const rows = shown.flatMap(([, rs]) => rs);
+  const count = rows.length;
+  const head = "h-11 border-b border-line bg-surface-2 px-4 text-left text-xs font-semibold text-ink-2";
 
   const missing = all.filter((r) => r.missing > 0);
 
@@ -137,55 +140,74 @@ export function RecipesSheet({ recipes, ingredients }: { recipes: Recipe[]; ingr
         ) : null}
       </div>
 
-      <p className="mt-3 text-sm text-ink-2" aria-live="polite">
-        {count === recipes.length ? `${count} recipes` : `${count} of ${recipes.length} recipes`}
-      </p>
-
       {count === 0 ? (
-        <p className="surface mt-2 px-4 py-10 text-center text-ink-2">No recipes match. Try another search or clear the filter.</p>
+        <p className="surface mt-3 px-4 py-10 text-center text-ink-2">No recipes match. Try another search or clear the filter.</p>
       ) : (
-        <div className="mt-2 flex max-w-3xl flex-col gap-5">
-          {shown.map(([g, rows]) => (
-            <section key={g} aria-labelledby={`grp-${g}`}>
-              <h2 id={`grp-${g}`} className="mb-1.5 px-1 text-sm font-semibold text-ink-2">
-                {g}
-              </h2>
-              <ul className="surface overflow-hidden">
-                {rows.map(({ recipe: r, sells, priced, under, missing: gone }) => (
-                  <li key={r.id} className="group flex items-center border-b border-line last:border-b-0">
-                    <Link
-                      href={`/recipes/${r.id}`}
-                      className="flex min-h-16 min-w-0 flex-1 items-center gap-3 py-2.5 pr-2 pl-4 hover:bg-surface-2 focus-visible:outline-offset-[-2px] sm:pl-5"
-                    >
-                      <span className="min-w-0 flex-1">
-                        <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                          <span className={r.active ? "font-display text-md font-semibold [overflow-wrap:anywhere]" : "font-display text-md font-semibold text-ink-2 [overflow-wrap:anywhere]"}>{r.name}</span>
-                          {!r.active ? <span className="text-xs text-ink-3">not selling</span> : null}
-                          {r.active && under ? <MarginTag target={r.target_margin} /> : null}
-                        </span>
-                        <span className="mt-0.5 block truncate text-sm text-ink-2">{priced ? sells : "No price yet"}</span>
-                        {gone ? (
-                          <span className="mt-0.5 flex items-center gap-1 text-xs font-medium text-rise">
-                            <TriangleAlert className="size-3 shrink-0" aria-hidden />
-                            {gone === 1 ? "1 ingredient removed" : `${gone} ingredients removed`}
-                          </span>
-                        ) : null}
+        <div className="surface mt-3 overflow-hidden">
+          <table className="w-full table-fixed border-separate border-spacing-0 text-sm" aria-label="Recipes">
+            <thead>
+              <tr>
+                <th scope="col" className={cx(head, "sm:w-[38%]")}>
+                  Product
+                </th>
+                <th scope="col" className={cx(head, "max-sm:hidden")}>
+                  Sold as
+                </th>
+                <th scope="col" className={cx(head, "w-[6.5rem] sm:w-[11.5rem]")}>
+                  <span className="sr-only">Actions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(({ recipe: r, sells, priced, under, missing: gone }, i) => {
+                const line = i === rows.length - 1 ? "" : "border-b border-line";
+                return (
+                  <tr key={r.id} className="hover:bg-surface-2/60">
+                    <th scope="row" className={cx("px-4 py-3.5 text-left align-middle font-normal", line)}>
+                      <Link href={`/recipes/${r.id}`} className="font-display text-[0.95rem] font-semibold [overflow-wrap:anywhere] underline-offset-4 hover:underline">
+                        <span className={r.active ? undefined : "text-ink-2"}>{r.name}</span>
+                      </Link>
+                      <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-ink-2">
+                        {r.group ?? "No group"}
+                        {!r.active ? <span className="text-ink-3">· not selling</span> : null}
+                        {r.active && under ? <MarginTag target={r.target_margin} /> : null}
                       </span>
-                      <ChevronRight className="size-4 shrink-0 text-ink-3 group-hover:text-ink-2" aria-hidden />
-                    </Link>
-                    <Link
-                      href={`/bake/${r.id}`}
-                      title={r.steps.length ? `Bake ${r.name}, step by step` : `Bake ${r.name}: ingredients only, no steps yet`}
-                      aria-label={`Bake ${r.name}`}
-                      className="mr-2 grid size-11 shrink-0 place-items-center rounded-[var(--radius-surface)] text-ink-2 hover:bg-accent-wash hover:text-ink focus-visible:outline-offset-[-2px]"
-                    >
-                      <ChefHat className="size-[18px]" aria-hidden />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
+                      {/* phones: what it's sold as sits under the name */}
+                      <span className={cx("mt-1 block text-sm sm:hidden", priced ? "text-ink-2" : "text-ink-3")}>{priced ? sells : "No price yet"}</span>
+                      {gone ? (
+                        <span className="mt-1 flex items-center gap-1 text-xs font-medium text-rise">
+                          <TriangleAlert className="size-3 shrink-0" aria-hidden />
+                          {gone === 1 ? "1 ingredient removed" : `${gone} ingredients removed`}
+                        </span>
+                      ) : null}
+                    </th>
+                    <td className={cx("px-4 py-3.5 align-middle max-sm:hidden", line, priced ? "text-ink" : "text-ink-3")}>{priced ? sells : "No price yet"}</td>
+                    <td className={cx("py-1.5 pr-2 align-middle", line)}>
+                      <div className="flex justify-end gap-1">
+                        <Link
+                          href={`/recipes/${r.id}`}
+                          aria-label={`Edit ${r.name}`}
+                          className="inline-flex h-11 items-center justify-center gap-1.5 rounded-[var(--radius-surface)] px-3 font-medium text-ink-2 hover:bg-accent-wash hover:text-ink max-sm:w-11 max-sm:px-0 lg:h-9"
+                        >
+                          <Pencil className="size-4" aria-hidden />
+                          <span className="max-sm:hidden">Edit</span>
+                        </Link>
+                        <Link
+                          href={`/bake/${r.id}`}
+                          aria-label={`Bake ${r.name}`}
+                          title={r.steps.length ? `Bake ${r.name}, step by step` : `Bake ${r.name}: ingredients only, no steps yet`}
+                          className="inline-flex h-11 items-center justify-center gap-1.5 rounded-[var(--radius-surface)] px-3 font-medium text-ink-2 hover:bg-accent-wash hover:text-ink max-sm:w-11 max-sm:px-0 lg:h-9"
+                        >
+                          <ChefHat className="size-4" aria-hidden />
+                          <span className="max-sm:hidden">Bake</span>
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </>
