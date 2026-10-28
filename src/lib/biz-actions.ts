@@ -10,6 +10,7 @@ import {
   fieldErrors,
   incomeSchema,
   orderSchema,
+  priceRowSchema,
   recipeSchema,
   restockSchema,
   sketchSchema,
@@ -76,6 +77,33 @@ export async function deleteRecipe(id: string): Promise<ActionResult<Recipe | nu
 /** Undo for a deleted recipe: same id, so orders keep their link. */
 export async function restoreRecipe(row: Recipe): Promise<ActionResult<Recipe>> {
   return run(async () => (await getRepo()).recipes.restore(row));
+}
+
+/**
+ * Sets one price from the Price list. It is the product's real price: the recipe's variety
+ * changes, so orders and the recipe use it. A product with no price yet gets its first variety.
+ */
+export async function savePriceRow(recipeId: string, varietyId: string | null, raw: unknown): Promise<ActionResult<{ recipe: Recipe; varietyId: string }>> {
+  const p = parse(priceRowSchema, raw);
+  if (!p.ok) return p.result;
+  return run(async () => {
+    const repo = await getRepo();
+    const r = await repo.recipes.get(recipeId);
+    if (!r) throw new RepoError("That product no longer exists");
+    const name = p.data.name || r.yield_label.charAt(0).toUpperCase() + r.yield_label.slice(1);
+    let varieties = r.varieties ?? [];
+    let id = varietyId;
+    if (id) {
+      if (!varieties.some((v) => v.id === id)) throw new RepoError("That variety was removed from the recipe. Reload the page.");
+      varieties = varieties.map((v) => (v.id === id ? { ...v, name, price: p.data.price, note: p.data.note } : v));
+    } else {
+      id = `v${Math.random().toString(36).slice(2, 10)}`;
+      varieties = [...varieties, { id, name, units: 1, price: p.data.price, extras: [], note: p.data.note }];
+    }
+    const first = varieties[0];
+    const recipe = await repo.recipes.update(recipeId, { varieties, price: Math.round((first.price / first.units) * 100) / 100 });
+    return { recipe, varietyId: id };
+  });
 }
 
 /* ---------- orders ---------- */

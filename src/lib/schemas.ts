@@ -125,6 +125,13 @@ export const recipeSchema = z.object({
 });
 export type RecipeInput = z.infer<typeof recipeSchema>;
 
+/** One row of the Price list, edited in place: a variety's name, price and note. */
+export const priceRowSchema = z.object({
+  name: z.string().trim().max(60, "Keep the name under 60 characters"),
+  price: z.number({ error: "Type the price as a number" }).min(0, "The price can't be negative").max(1_000_000, "That price looks too high"),
+  note: optionalText(80),
+});
+
 export const orderSchema = z
   .object({
     customer: z.string().trim().min(1, "Who is the order for?").max(80),
