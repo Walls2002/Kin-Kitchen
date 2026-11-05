@@ -51,6 +51,7 @@ export const Redo2 = make(Ph.ArrowUUpRight, "Redo2");
 // Actions
 export const Search = make(Ph.MagnifyingGlass, "Search");
 export const Pencil = make(Ph.PencilSimple, "Pencil");
+export const Copy = make(Ph.Copy, "Copy");
 export const Trash2 = make(Ph.Trash, "Trash2");
 export const Download = make(Ph.DownloadSimple, "Download");
 export const Share2 = make(Ph.ShareFat, "Share2");

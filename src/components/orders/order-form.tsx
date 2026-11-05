@@ -12,6 +12,7 @@ import { ORDER_STATUSES, PAYMENT_METHODS, SALES_CHANNELS, type Ingredient, type 
 import { MoneyLine, StatusPill, statusLabel } from "../biz-ui";
 import { Combobox } from "../recipes/combobox";
 import { PesoInput } from "../recipes/recipe-editor";
+import { useUnsavedChanges } from "../leave-guard";
 import { Sheet } from "../sheet";
 import { useToast } from "../toast";
 import { Button, Field, Input, Select, Textarea, cx, inputClass } from "../ui";
@@ -83,9 +84,12 @@ export function OrderForm({ order, recipes, ingredients, customers, now, aside }
   const [status, setStatus] = useState<OrderStatus>(order?.status ?? "pending");
   // The status bar changes the saved order; keep the form's status field in step with it.
   const [seenStatus, setSeenStatus] = useState(order?.status);
+  // What the saved order's status is, so a status-bar change doesn't read as an unsaved edit.
+  const [baseStatus, setBaseStatus] = useState<OrderStatus>(order?.status ?? "pending");
   if (order && order.status !== seenStatus) {
     setSeenStatus(order.status);
     setStatus(order.status);
+    setBaseStatus(order.status);
   }
   const [items, setItems] = useState<ItemState[]>(() =>
     (order?.items ?? []).map((i, n) => ({ key: `s${n}`, recipe_id: i.recipe_id, variety_id: i.variety_id ?? null, name: i.name, qty: show(i.qty), unit_price: show(i.unit_price), unit_cost: i.unit_cost })),
@@ -176,6 +180,11 @@ export function OrderForm({ order, recipes, ingredients, customers, now, aside }
 
   const [design, setDesign] = useState<PendingDesign | null>(null);
 
+  const snapshot = JSON.stringify({ ...payload, status: undefined });
+  const [baseline, setBaseline] = useState(snapshot);
+  const dirty = snapshot !== baseline || status !== baseStatus || (!order && !!design);
+  const { leave } = useUnsavedChanges(dirty, order ? `your changes to order #${order.number}` : "this new order");
+
   const submit = (e?: React.FormEvent) => {
     e?.preventDefault();
     setFormError(undefined);
@@ -194,6 +203,8 @@ export function OrderForm({ order, recipes, ingredients, customers, now, aside }
         setFormError(res.error);
         return;
       }
+      setBaseline(snapshot);
+      setBaseStatus(result.data.status);
       const c = res.data!;
       const changed = c.previous !== c.order.status;
       const m = changed ? statusMessage(c, { afterSave: true }) : { message: "" };
@@ -595,7 +606,7 @@ export function OrderForm({ order, recipes, ingredients, customers, now, aside }
         <span className="figures mr-auto hidden text-sm text-ink-2 sm:inline">
           {items.length ? `${formatCount(items.reduce((s, i) => s + orZero(num(i.qty)), 0))} items · ${formatPeso(t.total)}` : ""}
         </span>
-        <Button onClick={() => router.back()} className="max-lg:hidden">
+        <Button onClick={() => leave(() => router.back())} className="max-lg:hidden">
           Cancel
         </Button>
         <Button type="submit" variant="primary" size="lg" busy={pending} className="flex-1 sm:flex-none">

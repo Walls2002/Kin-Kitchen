@@ -5,6 +5,7 @@ import { setStock } from "@/lib/actions";
 import { formatQty } from "@/lib/format";
 import type { EntryUnit, Unit } from "@/lib/types";
 import { entryUnitFor, factor } from "@/lib/units";
+import { useUnsavedSinceOpen } from "./leave-guard";
 import { Sheet } from "./sheet";
 import { useToast } from "./toast";
 import { Button, Field, Input, LowBadge, Segmented, Select, cx } from "./ui";
@@ -85,6 +86,7 @@ function StockForm({ item, current, initialMode, onDone }: { item: StockItem; cu
   const [entryUnit, setEntryUnit] = useState<EntryUnit>(entryUnitFor(item.unit, Math.max(item.package_size, mode === "set" ? current : 0)));
   const [raw, setRaw] = useState(mode === "set" ? String(current / factor(entryUnit)) : "");
   const [error, setError] = useState<string>();
+  useUnsavedSinceOpen(raw, `this stock change for ${item.name}`);
 
   const amount = raw.trim() === "" ? NaN : Number(raw.replace(/,/g, ""));
   const base = amount * factor(entryUnit);

@@ -8,6 +8,7 @@ import { deleteTask, markTask, saveTask } from "@/lib/biz-actions";
 import { daysBetween, taskState, today, type TaskBucket } from "@/lib/biz";
 import { formatDayWeek, relativeDay } from "@/lib/format";
 import { TASK_AREAS, type Task, type TaskRepeat } from "@/lib/types";
+import { useUnsavedChanges } from "./leave-guard";
 import { Sheet } from "./sheet";
 import { useToast } from "./toast";
 import { Button, Field, Input, Segmented, Select, Textarea, cx } from "./ui";
@@ -129,6 +130,7 @@ function TaskSheet({ open, task, onClose }: { open: boolean; task: Task | null; 
   const [v, setV] = useState<Draft>(toDraft());
   const [errors, setErrors] = useState<Record<string, string>>({});
   const formId = useId();
+  useUnsavedChanges(open && JSON.stringify(v) !== JSON.stringify(toDraft(task ?? undefined)), task ? `your changes to ${task.title}` : "this new task");
   useEffect(() => {
     if (open) {
       setV(toDraft(task ?? undefined));

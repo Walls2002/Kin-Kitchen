@@ -8,6 +8,7 @@ import { formatCpu, formatQty } from "@/lib/format";
 import { fieldErrors, pastPriceSchema } from "@/lib/schemas";
 import type { EntryUnit, Ingredient } from "@/lib/types";
 import { entryUnitFor, factor } from "@/lib/units";
+import { useUnsavedSinceOpen } from "./leave-guard";
 import { Sheet } from "./sheet";
 import { Canister } from "./canister";
 import { StockSheet, useStockAdjust, type AdjustMode } from "./stock";
@@ -129,6 +130,7 @@ function PastPriceForm({ ingredient, onDone }: { ingredient: Ingredient; onDone:
   const [supplier, setSupplier] = useState(ingredient.supplier ?? "");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const id = useId();
+  useUnsavedSinceOpen([entryUnit, date, price, size, supplier], `this past price for ${ingredient.name}`);
 
   const p = Number(price.replace(/,/g, ""));
   const s = Number(size.replace(/,/g, "")) * factor(entryUnit);

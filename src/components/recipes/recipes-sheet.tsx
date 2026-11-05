@@ -1,6 +1,6 @@
 "use client";
 
-import { ChefHat, Pencil, Search, TriangleAlert, X } from "@/components/icons";
+import { ChefHat, Copy, Pencil, Search, TriangleAlert, X } from "@/components/icons";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { recipeCost, sellOptions, varietyCost } from "@/lib/biz";
@@ -154,7 +154,7 @@ export function RecipesSheet({ recipes, ingredients }: { recipes: Recipe[]; ingr
                 <th scope="col" className={cx(head, "max-sm:hidden")}>
                   Sold as
                 </th>
-                <th scope="col" className={cx(head, "w-[6.5rem] sm:w-[11.5rem]")}>
+                <th scope="col" className={cx(head, "w-[6.5rem] sm:w-[17rem]")}>
                   <span className="sr-only">Actions</span>
                 </th>
               </tr>
@@ -192,6 +192,16 @@ export function RecipesSheet({ recipes, ingredients }: { recipes: Recipe[]; ingr
                         >
                           <Pencil className="size-4" aria-hidden />
                           <span className="max-sm:hidden">Edit</span>
+                        </Link>
+                        {/* Phones keep two actions per row; Duplicate sits on the recipe page there. */}
+                        <Link
+                          href={`/recipes/new?from=${r.id}`}
+                          aria-label={`Duplicate ${r.name}`}
+                          title={`Start a new recipe from ${r.name}`}
+                          className="inline-flex h-11 items-center justify-center gap-1.5 rounded-[var(--radius-surface)] px-3 font-medium text-ink-2 hover:bg-accent-wash hover:text-ink max-sm:hidden lg:h-9"
+                        >
+                          <Copy className="size-4" aria-hidden />
+                          Duplicate
                         </Link>
                         <BakeButton
                           recipe={r}

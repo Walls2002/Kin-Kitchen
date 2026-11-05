@@ -3,6 +3,7 @@
 import { Minus, Plus, ShoppingBag } from "@/components/icons";
 import { useRouter } from "next/navigation";
 import { useId, useState, useTransition } from "react";
+import { useUnsavedSinceOpen } from "@/components/leave-guard";
 import { Sheet } from "@/components/sheet";
 import { useToast } from "@/components/toast";
 import { Button, Change, Field, Input, cx } from "@/components/ui";
@@ -50,6 +51,7 @@ function RestockForm({ ingredient, suppliers, onDone }: { ingredient: RestockIte
   const [supplier, setSupplier] = useState(ingredient.supplier ?? "");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const id = useId();
+  useUnsavedSinceOpen([packs, price, date, supplier], `this purchase of ${ingredient.name}`);
 
   const n = num(packs);
   const p = num(price);

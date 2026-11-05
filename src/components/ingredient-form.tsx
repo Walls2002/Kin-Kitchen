@@ -1,12 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useId, useState, useTransition } from "react";
+import { useId, useRef, useState, useTransition } from "react";
 import { saveIngredient } from "@/lib/actions";
 import { formatCpu, formatPeso } from "@/lib/format";
 import { ingredientSchema, fieldErrors } from "@/lib/schemas";
 import type { Category, EntryUnit, Ingredient } from "@/lib/types";
 import { ENTRY_UNITS, entryUnitFor, factor, toBase } from "@/lib/units";
+import { useUnsavedChanges } from "./leave-guard";
 import { Sheet } from "./sheet";
 import { useToast } from "./toast";
 import { Button, Field, Input, Select, Textarea, cx } from "./ui";
@@ -67,6 +68,11 @@ function useIngredientForm({ categories, ingredient }: Props, onSaved: (id: stri
     low_stock_at: v.low_stock_at.trim() === "" ? 0 : num(v.low_stock_at) * f,
     notes: v.notes,
   };
+  const snapshot = JSON.stringify(payload);
+  const [baseline, setBaseline] = useState(snapshot);
+  const dirty = snapshot !== baseline;
+  const guard = useUnsavedChanges(dirty, ingredient ? `your changes to ${ingredient.name}` : "this new item");
+
   const cpu = payload.price / payload.package_size;
   const preview = Number.isFinite(cpu) && payload.package_size > 0 && payload.price > 0 ? cpu : null;
 
@@ -80,7 +86,11 @@ function useIngredientForm({ categories, ingredient }: Props, onSaved: (id: stri
     }
     start(async () => {
       const res = await saveIngredient(ingredient?.id ?? null, parsed.data);
-      if (res.ok) onSaved(res.data!.id, parsed.data.name);
+      if (res.ok) {
+        setBaseline(snapshot);
+        guard.release();
+        onSaved(res.data!.id, parsed.data.name);
+      }
       else {
         setErrors(res.fieldErrors ?? {});
         setFormError(res.fieldErrors ? undefined : res.error);
@@ -88,7 +98,7 @@ function useIngredientForm({ categories, ingredient }: Props, onSaved: (id: stri
     });
   };
 
-  return { v, set, changeUnit, errors, formError, pending, submit, preview, base };
+  return { v, set, changeUnit, errors, formError, pending, submit, preview, base, leave: guard.leave };
 }
 
 function Fields({
@@ -204,15 +214,19 @@ export function IngredientModal(props: Props) {
   const toast = useToast();
   const [open, setOpen] = useState(true);
   const formId = useId();
-  const form = useIngredientForm(props, (_id, name) => {
-    toast({ message: props.ingredient ? `Saved ${name}` : `Added ${name}` });
-    setOpen(false);
-    router.back();
-  });
-  const close = () => {
+  // Closing the dialog fires its close event too; leave once.
+  const gone = useRef(false);
+  const goBack = () => {
+    if (gone.current) return;
+    gone.current = true;
     setOpen(false);
     router.back();
   };
+  const form = useIngredientForm(props, (_id, name) => {
+    toast({ message: props.ingredient ? `Saved ${name}` : `Added ${name}` });
+    goBack();
+  });
+  const close = () => form.leave(goBack);
   return (
     <Sheet
       open={open}
@@ -260,7 +274,7 @@ export function IngredientPageForm(props: Props) {
         <Fields form={form} categories={props.categories} suppliers={props.suppliers} editing={!!props.ingredient} />
       </div>
       <div className="sep-t sticky bottom-[calc(env(safe-area-inset-bottom)+4rem)] z-20 -mx-4 mt-5 flex gap-2 bg-ground px-4 py-3 sm:mx-0 sm:px-0 lg:bottom-0">
-        <Button onClick={() => router.back()} className="max-lg:hidden">
+        <Button onClick={() => form.leave(() => router.back())} className="max-lg:hidden">
           Cancel
         </Button>
         <Button type="submit" variant="primary" size="lg" busy={form.pending} className="flex-1 lg:ml-auto lg:flex-none">

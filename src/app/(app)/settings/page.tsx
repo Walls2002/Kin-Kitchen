@@ -79,7 +79,7 @@ export default async function SettingsPage() {
                 <code className="figures text-ink">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> to switch to your own private data.
               </p>
             ) : (
-              <form action={signOut} className="flex flex-wrap items-center justify-between gap-3">
+              <form action={signOut} data-leaves className="flex flex-wrap items-center justify-between gap-3">
                 <p className="min-w-0 truncate">
                   <span className="block text-sm text-ink-2">Logged in as</span>
                   {email}

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowLeft, ArrowUp, ChefHat, ChevronDown, Clock, ExternalLink, Lock, Plus, Trash2, TriangleAlert, X } from "@/components/icons";
+import { ArrowDown, ArrowLeft, ArrowUp, ChefHat, ChevronDown, Clock, Copy, ExternalLink, Lock, Plus, Trash2, TriangleAlert, X } from "@/components/icons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
@@ -14,11 +14,14 @@ import { BakeButton, BakeChooser } from "../bake/bake-chooser";
 import { Sheet } from "../sheet";
 import { useToast } from "../toast";
 import { Button, Field, Input, Textarea, buttonClass, cx } from "../ui";
+import { useUnsavedChanges } from "../leave-guard";
 import { Combobox } from "./combobox";
 import { LowPill, MarginTag, ProfitFigure } from "./marks";
 
 interface Props {
   recipe?: Recipe;
+  /** A new recipe that starts as a copy of this one. Nothing is saved until Add recipe. */
+  copyOf?: Recipe;
   ingredients: Ingredient[];
   groups: string[];
 }
@@ -147,28 +150,30 @@ export function toRecipeInput(r: Recipe): RecipeInput {
   };
 }
 
-export function RecipeEditor({ recipe, ingredients, groups }: Props) {
+export function RecipeEditor({ recipe, copyOf, ingredients, groups }: Props) {
   const router = useRouter();
   const toast = useToast();
   const ids = useId();
   const [pending, start] = useTransition();
   const ingById = useMemo(() => new Map(ingredients.map((i) => [i.id, i])), [ingredients]);
 
+  // What the form starts from: the recipe being edited, or the one being copied.
+  const src = recipe ?? copyOf;
   const [v, setV] = useState(() => ({
-    name: recipe?.name ?? "",
-    group: recipe?.group ?? "",
-    yield_qty: recipe ? show(recipe.yield_qty) : "",
-    yield_label: recipe?.yield_label ?? "pc",
-    labor_cost: recipe ? show(recipe.labor_cost) : "",
-    target_margin: recipe ? show(recipe.target_margin) : "50",
-    notes: recipe?.notes ?? "",
-    video_url: recipe?.video_url ?? "",
-    active: recipe?.active ?? true,
+    name: recipe ? recipe.name : copyOf ? `${copyOf.name} (copy)` : "",
+    group: src?.group ?? "",
+    yield_qty: src ? show(src.yield_qty) : "",
+    yield_label: src?.yield_label ?? "pc",
+    labor_cost: src ? show(src.labor_cost) : "",
+    target_margin: src ? show(src.target_margin) : "50",
+    notes: src?.notes ?? "",
+    video_url: src?.video_url ?? "",
+    active: src?.active ?? true,
   }));
   const keySeq = useRef(0);
   const nextKey = () => `l${keySeq.current++}`;
   const [lines, setLines] = useState<LineState[]>(() =>
-    (recipe?.lines ?? []).map((l, n) => {
+    (src?.lines ?? []).map((l, n) => {
       const ing = ingById.get(l.ingredient_id);
       return {
         key: `s${n}`,
@@ -181,24 +186,25 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
     }),
   );
   const [steps, setSteps] = useState<StepState[]>(() =>
-    (recipe?.steps ?? []).map((s: RecipeStep, n) => ({ key: `t${n}`, text: s.text, minutes: s.minutes ? String(s.minutes) : "", touched: false })),
+    (src?.steps ?? []).map((s: RecipeStep, n) => ({ key: `t${n}`, text: s.text, minutes: s.minutes ? String(s.minutes) : "", touched: false })),
   );
   // A recipe saved before utilities were itemized shows its overhead as one line.
   const [utilities, setUtilities] = useState<UtilityState[]>(() =>
-    recipe?.utilities?.length
-      ? recipe.utilities.map((u, n) => ({ key: `u${n}`, name: u.name, cost: show(u.cost) }))
-      : recipe
-        ? recipe.overhead_cost > 0
-          ? [{ key: "u0", name: "Overhead", cost: show(recipe.overhead_cost) }]
+    src?.utilities?.length
+      ? src.utilities.map((u, n) => ({ key: `u${n}`, name: u.name, cost: show(u.cost) }))
+      : src
+        ? src.overhead_cost > 0
+          ? [{ key: "u0", name: "Overhead", cost: show(src.overhead_cost) }]
           : []
         : UTILITY_PRESETS.map((name, n) => ({ key: `u${n}`, name, cost: "" })),
   );
   // A recipe priced before varieties existed starts with one: its unit at its price.
   const [varieties, setVarieties] = useState<VarietyState[]>(() => {
-    if (recipe?.varieties?.length)
-      return recipe.varieties.map((x, n) => ({
+    if (src?.varieties?.length)
+      return src.varieties.map((x, n) => ({
         key: `v${n}`,
-        id: x.id,
+        // A copy gets its own variety ids, so orders of the original never point at it.
+        id: recipe ? x.id : newVarietyId(),
         name: x.name,
         units: show(x.units),
         price: show(x.price),
@@ -207,8 +213,8 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
         open: false,
         touched: false,
       }));
-    if (recipe && !(recipe.price > 0)) return [];
-    return [{ key: "v0", id: newVarietyId(), name: recipe ? capital(recipe.yield_label) : "", units: "1", price: recipe ? show(recipe.price) : "", note: "", extras: [], open: false, touched: false }];
+    if (src && !(src.price > 0)) return [];
+    return [{ key: "v0", id: newVarietyId(), name: src ? capital(src.yield_label) : "", units: "1", price: src ? show(src.price) : "", note: "", extras: [], open: false, touched: false }];
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string>();
@@ -326,6 +332,7 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
   const snapshot = JSON.stringify(payload);
   const [baseline, setBaseline] = useState(snapshot);
   const dirty = snapshot !== baseline;
+  const { leave } = useUnsavedChanges(dirty, recipe ? `your changes to ${recipe.name}` : copyOf ? "this copy" : "this new recipe");
 
   /* ---------- lines ---------- */
 
@@ -434,15 +441,32 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
 
   return (
     <form ref={formRef} onSubmit={submit} noValidate>
-      <Link href="/recipes" className="-ml-2 inline-flex h-11 items-center gap-1.5 rounded-[var(--radius-surface)] px-2 text-sm font-medium text-ink-2 hover:text-ink lg:h-9">
-        <ArrowLeft className="size-4" aria-hidden />
-        Recipes
-      </Link>
+      <div className="flex items-center justify-between gap-3">
+        <Link href="/recipes" className="-ml-2 inline-flex h-11 items-center gap-1.5 rounded-[var(--radius-surface)] px-2 text-sm font-medium text-ink-2 hover:text-ink lg:h-9">
+          <ArrowLeft className="size-4" aria-hidden />
+          Recipes
+        </Link>
+        {recipe ? (
+          // Copies the saved recipe; with unsaved edits, the leave guard asks first.
+          <Link
+            href={`/recipes/new?from=${recipe.id}`}
+            title={`Start a new recipe from ${recipe.name}`}
+            className="-mr-2 inline-flex h-11 items-center gap-1.5 rounded-[var(--radius-surface)] px-2 text-sm font-medium text-ink-2 hover:bg-accent-wash hover:text-ink lg:h-9"
+          >
+            <Copy className="size-4" aria-hidden />
+            Duplicate
+          </Link>
+        ) : null}
+      </div>
       <header className="mt-1 flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
         <div className="min-w-0 flex-1 basis-80">
-          <h1 className="text-xl font-semibold tracking-tight [overflow-wrap:anywhere]">{recipe ? recipe.name : "New recipe"}</h1>
+          <h1 className="text-xl font-semibold tracking-tight [overflow-wrap:anywhere]">{recipe ? recipe.name : copyOf ? `Copy of ${copyOf.name}` : "New recipe"}</h1>
           <p className="mt-1 text-ink-2">
-            {recipe ? "Costs follow today's ingredient prices. Change an amount and the price label updates as you type." : "List what one batch uses. Each line is priced from your pantry as you type."}
+            {recipe
+              ? "Costs follow today's ingredient prices. Change an amount and the price label updates as you type."
+              : copyOf
+                ? `Everything from ${copyOf.name} is filled in. Rename it and change what's different; ${copyOf.name} stays as it is.`
+                : "List what one batch uses. Each line is priced from your pantry as you type."}
           </p>
         </div>
         {recipe ? (
@@ -744,7 +768,7 @@ export function RecipeEditor({ recipe, ingredients, groups }: Props) {
         <span className="mr-auto hidden text-sm text-ink-2 sm:inline" aria-live="polite">
           {dirty ? "Unsaved changes" : recipe ? "All changes saved" : ""}
         </span>
-        <Button onClick={() => router.back()} className="max-lg:hidden">
+        <Button onClick={() => leave(() => router.back())} className="max-lg:hidden">
           Cancel
         </Button>
         <Button type="submit" variant="primary" size="lg" busy={pending} className="flex-1 sm:flex-none">

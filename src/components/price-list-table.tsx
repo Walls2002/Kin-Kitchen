@@ -8,6 +8,7 @@ import { savePriceRow } from "@/lib/biz-actions";
 import { formatPeso, formatPesoWhole } from "@/lib/format";
 import { ProfitFigure } from "./recipes/marks";
 import { PesoInput } from "./recipes/recipe-editor";
+import { useUnsavedSinceOpen } from "./leave-guard";
 import { Sheet } from "./sheet";
 import { useToast } from "./toast";
 import { Button, Field, Input, Select, cx } from "./ui";
@@ -187,6 +188,7 @@ function PriceForm({ row, onDone }: { row: PriceRow; onDone: () => void }) {
   const [price, setPrice] = useState(row.price !== null && row.varietyId ? String(Math.round(row.price * 100) / 100) : "");
   const [note, setNote] = useState(row.note);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  useUnsavedSinceOpen([name, price, note], `the price for ${row.name}`);
 
   const n = Number(price.replace(/[₱,\s]/g, ""));
   const valid = price.trim() !== "" && Number.isFinite(n) && n >= 0;

@@ -3,6 +3,7 @@
 import { AlertTriangle, Check, CircleDashed, Trash2 } from "@/components/icons";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { useUnsavedSinceOpen } from "@/components/leave-guard";
 import { Sheet } from "@/components/sheet";
 import { useToast } from "@/components/toast";
 import { Button, Field, Input, cx } from "@/components/ui";
@@ -132,6 +133,7 @@ function PaymentForm({ year, period, onDone }: { year: number; period: TaxPeriod
   const [reference, setReference] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const name = returnName(period.form, period.quarter);
+  useUnsavedSinceOpen([amount, paidOn, reference], `this ${name} payment`);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
