@@ -174,9 +174,9 @@ export interface Order {
 
 /* ---------- website orders ---------- */
 
-export const WEB_ORDER_STATUSES = ["new", "converted", "dismissed"] as const;
+export const WEB_ORDER_STATUSES = ["new", "converted", "answered", "dismissed"] as const;
 export type WebOrderStatus = (typeof WEB_ORDER_STATUSES)[number];
-export type WebOrderKind = "basket" | "custom-cake";
+export type WebOrderKind = "basket" | "custom-cake" | "question";
 
 /** One line of a website basket, as the customer picked it. */
 export interface WebOrderItem {
@@ -187,9 +187,10 @@ export interface WebOrderItem {
 }
 
 /**
- * A basket or custom-cake request sent from the public website through the
- * submit_web_order RPC. It waits in the Orders inbox until the owner makes an
- * order from it (converted, with order_id) or dismisses it.
+ * An inquiry sent from the public website through the submit_web_order RPC: a
+ * pre-order basket, a custom-cake request or a question. It waits on the
+ * Inquiries page until the owner makes an order from it (converted, with
+ * order_id), answers a question (answered) or dismisses it.
  */
 export interface WebOrder {
   id: string;
@@ -208,6 +209,8 @@ export interface WebOrder {
   items: WebOrderItem[];
   /** The order made from it. */
   order_id: string | null;
+  /** When the owner's email about it went out (migration 0012); absent before that. */
+  notified_at?: string | null;
 }
 
 export interface IncomeEntry {

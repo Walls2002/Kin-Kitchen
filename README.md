@@ -25,9 +25,11 @@ The first time you log in, the starter categories are created for you. Only the 
 
 ## Website orders
 
-The public website (a static site with no server) sends baskets and custom-cake requests straight into the CRM. They land in **From the website** at the top of Orders, where **Make order** opens the new-order form filled in from the request (customer, contact, channel Website, the pickup day as due date, the item list and notes; items whose names match the price list are added) and saving the order marks the request converted and links it. **Dismiss** sets it aside, with Undo.
+The public website (a static site with no server) sends pre-orders, cake requests and questions straight into the CRM. They land on **Inquiries** (in the Sell group; a count shows in the rail, and Orders and Today link to it). **Make order** opens the new-order form filled in from the request (customer, contact, channel Website, the pickup day as due date, the item list and notes; items whose names match the price list are added) and saving the order marks the request converted and links it. Questions get **Mark answered**; anything can be **Dismissed**; handled ones can move back to new. Each has Undo.
 
-1. Run [supabase/migrations/0010_web_orders.sql](supabase/migrations/0010_web_orders.sql) in the SQL editor (or `npx supabase db push`). Until then the inbox is simply empty.
+Every new inquiry is also emailed to the owner: a trigger on `web_orders` calls the `notify-web-order` Edge Function ([supabase/functions/notify-web-order](supabase/functions/notify-web-order/index.ts)), which sends through Brevo once per inquiry. It sends from `info@kinkitchen.store` (the domain is authenticated in Brevo) to `rerlasan@gmail.com`; override with the function secrets `NOTIFY_EMAIL_FROM`, `NOTIFY_EMAIL_TO`, `CRM_URL` and `SITE_URL`. The Brevo API key (`xkeysib-…`, not the SMTP key) is read from the function secret `BREVO_API_KEY`, or else from the Vault secret `brevo_api_key` through `brevo_api_key()`, which only the service role can call ([0013](supabase/migrations/0013_brevo_key_from_vault.sql)). Without a key it does nothing. Brevo's IP allow-list must stay off: Edge Functions don't have fixed IPs.
+
+1. Run [0010_web_orders.sql](supabase/migrations/0010_web_orders.sql) and then [0012_inquiries.sql](supabase/migrations/0012_inquiries.sql) in the SQL editor (or `npx supabase db push`), and deploy the function (`npx supabase functions deploy notify-web-order --no-verify-jwt`). Until then Inquiries is simply empty.
 2. Give the website your project URL and its publishable (anon) key. It posts to `${SUPABASE_URL}/rest/v1/rpc/submit_web_order` with the headers `apikey` and `Authorization: Bearer <anon key>` and this body:
 
 ```json

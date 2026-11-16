@@ -145,10 +145,10 @@ export default async function TodayPage() {
   const brief = [
     overdue ? `${plural(overdue, "order")} overdue` : null,
     `${plural(dueToday - overdue, "order")} due today`,
-    newWeb ? `${plural(newWeb, "website order")} to answer` : null,
+    newWeb ? `${plural(newWeb, "inquiry", "inquiries")} to answer` : null,
     `${plural(tasksLeft, "task")} left`,
     low.length ? `${plural(low.length, "thing")} to buy` : null,
-  ].filter(Boolean);
+  ].filter((x): x is string => !!x);
 
   const link = "inline-flex h-9 shrink-0 items-center gap-1 rounded-[var(--radius-surface)] px-2 text-sm font-medium text-ink-2 hover:bg-surface-2 hover:text-ink max-lg:h-11";
 
@@ -162,7 +162,13 @@ export default async function TodayPage() {
             {brief.map((x, i) => (
               <span key={x} className={cx(i === 0 && overdue ? "font-semibold text-rise" : undefined)}>
                 {i ? <span className="mr-2 text-ink-3" aria-hidden>·</span> : null}
-                {x}
+                {x.endsWith("to answer") ? (
+                  <Link href="/inquiries" className="underline decoration-line-strong underline-offset-2 hover:decoration-ink-2">
+                    {x}
+                  </Link>
+                ) : (
+                  x
+                )}
               </span>
             ))}
           </p>

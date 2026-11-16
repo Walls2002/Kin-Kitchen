@@ -2,8 +2,13 @@ import { recipeCost, sellName, sellOptions, varietyCost } from "./biz";
 import { formatDayWeek, formatStamp } from "./format";
 import type { Day, Ingredient, OrderItem, Recipe, WebOrder, WebOrderItem } from "./types";
 
-/** "Basket" or "Custom cake". */
-export const webKindLabel = (w: Pick<WebOrder, "kind">) => (w.kind === "custom-cake" ? "Custom cake" : "Basket");
+const KIND_LABEL: Record<WebOrder["kind"], string> = { basket: "Pre-order", "custom-cake": "Cake request", question: "Question" };
+
+/** "Pre-order", "Cake request" or "Question". */
+export const webKindLabel = (w: Pick<WebOrder, "kind">) => KIND_LABEL[w.kind] ?? "Inquiry";
+
+/** Whether an inquiry is still waiting for the owner. */
+export const isOpenInquiry = (w: Pick<WebOrder, "status">) => w.status === "new";
 
 /** "2 × Banana chocolate chip loaf (no nuts)" */
 export const webItemLine = (i: WebOrderItem) => `${i.qty} × ${i.name}${i.note ? ` (${i.note})` : ""}`;

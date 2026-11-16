@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { PageHeader, StatStrip, type Stat } from "@/components/biz-ui";
+import { ArrowRight, Inbox } from "@/components/icons";
 import { OrdersList } from "@/components/orders/orders-list";
-import { WebInbox } from "@/components/orders/web-inbox";
 import { ButtonLink } from "@/components/ui";
 import { addDays, inRange, monthRange, orderTotals, ymOf } from "@/lib/biz";
 import { loadBusiness } from "@/lib/biz-data";
@@ -68,7 +69,20 @@ export default async function OrdersPage() {
         }
       />
       {orders.length ? <StatStrip stats={stats} className="mt-5" /> : null}
-      {newWeb.length ? <WebInbox orders={newWeb} now={now} nowMs={Date.now()} className="mt-5" /> : null}
+      {newWeb.length ? (
+        <Link href="/inquiries" className="surface mt-5 flex min-h-12 items-center gap-3 px-4 py-2.5 transition-colors duration-150 hover:bg-surface-2 sm:px-5">
+          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent-wash text-ink">
+            <Inbox className="size-[18px]" aria-hidden />
+          </span>
+          <span className="figures min-w-0 flex-1 text-ink">
+            <span className="font-semibold">
+              {newWeb.length} new {newWeb.length === 1 ? "inquiry" : "inquiries"}
+            </span>{" "}
+            <span className="text-ink-2">from the website</span>
+          </span>
+          <ArrowRight className="size-4 shrink-0 text-accent" aria-hidden />
+        </Link>
+      ) : null}
       <OrdersList orders={orders} now={now} channels={channels} />
     </>
   );

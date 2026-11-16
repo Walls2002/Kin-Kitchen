@@ -314,13 +314,13 @@ export const CHAPTERS: Chapter[] = [
         ],
       },
       {
-        title: "Answer an order from the website",
+        title: "Answer an inquiry from the website",
         steps: [
-          "Baskets and custom-cake requests sent from your website wait at the top of **Orders** under **From the website**, newest first. Today counts them in the line under the heading.",
-          "Each one shows who sent it, their phone or email and how they'd like a reply, the pickup place and day, what they picked and their notes.",
-          "Tap **Make order**. The new order opens filled in: name, contact, **Came in through** Website, the pickup day as **Due**, and everything they sent in **Notes**. Items whose name matches your price list are already added; add the rest.",
-          "Tap **Add order**. The request leaves the inbox and stays linked to the order.",
-          "Not taking it? Tap **Dismiss**. The message has **Undo**.",
+          "Everything sent from your website (pre-orders, cake requests and questions) lands in **Inquiries**, newest first, and in your email. The rail shows how many are new; on a phone, a dot on **Orders** says there are some, and **Orders** and Today link to them.",
+          "Each one shows who sent it, their phone or email and how they'd like a reply, the pickup place and day, what they picked and their notes. Tap the number or email to reply.",
+          "For a pre-order or cake request, tap **Make order**. The new order opens filled in: name, contact, **Came in through** Website, the pickup day as **Due**, and everything they sent in **Notes**. Items whose name matches your price list are already added; add the rest. Tap **Add order** and the inquiry moves to **Handled**, linked to the order.",
+          "For a question, reply by phone, message or email, then tap **Mark answered**.",
+          "Not taking it? Tap **Dismiss**. Every move has **Undo**, and **Handled** has **Move back to new**.",
         ],
       },
       {

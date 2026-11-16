@@ -97,6 +97,7 @@ export const Shrink = make(Ph.ArrowsIn, "Shrink");
 // Sections
 export const ListChecks = make(Ph.ListChecks, "ListChecks");
 export const ClipboardList = make(Ph.ClipboardText, "ClipboardList");
+export const Inbox = make(Ph.Tray, "Inbox");
 export const BookOpenText = make(Ph.BookOpenText, "BookOpenText");
 export const HandCoins = make(Ph.HandCoins, "HandCoins");
 export const Receipt = make(Ph.Receipt, "Receipt");

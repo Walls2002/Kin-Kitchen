@@ -1,6 +1,7 @@
 import { LeaveGuardProvider } from "@/components/leave-guard";
-import { Fab, Rail, TabBar } from "@/components/nav";
+import { Fab, Rail, TabBar, type NavCounts } from "@/components/nav";
 import { ToastProvider } from "@/components/toast";
+import { getRepo } from "@/lib/data";
 import { isDemo } from "@/lib/env";
 import { signOut } from "../login/actions";
 
@@ -11,12 +12,23 @@ async function currentEmail() {
   return data.user?.email ?? null;
 }
 
+/** New website inquiries for the nav badge. Never lets a failed read break the app frame. */
+async function navCounts(): Promise<NavCounts> {
+  try {
+    const web = await (await getRepo()).listWebOrders();
+    return { "/inquiries": web.filter((w) => w.status === "new").length };
+  } catch {
+    return {};
+  }
+}
+
 export default async function AppLayout({ children, modal }: { children: React.ReactNode; modal: React.ReactNode }) {
-  const email = await currentEmail();
+  const [email, counts] = await Promise.all([currentEmail(), navCounts()]);
   return (
     <ToastProvider>
       <LeaveGuardProvider>
         <Rail
+          counts={counts}
           footer={
             isDemo ? null : (
               <form action={signOut} data-leaves className="flex flex-col gap-1">
@@ -34,7 +46,7 @@ export default async function AppLayout({ children, modal }: { children: React.R
           ) : null}
           <main className="mx-auto w-full max-w-[1320px] px-4 pt-5 pb-28 sm:px-6 lg:px-10 lg:pt-8 lg:pb-16">{children}</main>
         </div>
-        <TabBar />
+        <TabBar counts={counts} />
         <Fab />
         {modal}
       </LeaveGuardProvider>

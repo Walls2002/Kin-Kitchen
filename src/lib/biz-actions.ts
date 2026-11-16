@@ -277,7 +277,7 @@ export async function restoreOrder(row: Order): Promise<ActionResult<Order>> {
 
 /* ---------- website orders ---------- */
 
-/** Dismisses a website order, or puts it back in the inbox (undo). */
+/** Moves a website inquiry: dismissed, a question answered, or back to new (undo). */
 export async function markWebOrder(id: string, status: WebOrderStatus): Promise<ActionResult<WebOrder>> {
   const p = parse(webOrderStatusSchema, { id, status });
   if (!p.ok) return p.result;

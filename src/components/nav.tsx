@@ -16,6 +16,7 @@ import {
   Plus,
   ReceiptText,
   HelpCircle,
+  Inbox,
   Scales,
   Settings,
   Sun,
@@ -51,6 +52,7 @@ export const NAV: { group: string | null; items: NavItem[] }[] = [
     group: "Sell",
     items: [
       { href: "/orders", label: "Orders", icon: ClipboardList, blurb: "Every order, payment and due date" },
+      { href: "/inquiries", label: "Inquiries", icon: Inbox, blurb: "Pre-orders, cake requests and questions from the website" },
       { href: "/price-list", label: "Price list", icon: Tag, blurb: "Every product's prices in one list, ready to edit" },
       { href: "/recipes", label: "Recipes", icon: BookOpenText, blurb: "Ingredients, steps, the cost of each variety, and Bake mode" },
       { href: "/designs", label: "Cake designs", icon: Palette, blurb: "Sketch a customer's cake and keep every design" },
@@ -89,10 +91,14 @@ const GUIDE: NavItem = { href: "/guide", label: "How to use", icon: HelpCircle, 
 
 const isActive = (path: string, href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(`${href}/`));
 
-export function Rail({ footer }: { footer?: React.ReactNode }) {
+/** Counts shown beside a nav item, by href (new website inquiries on /inquiries). */
+export type NavCounts = Partial<Record<string, number>>;
+
+export function Rail({ footer, counts }: { footer?: React.ReactNode; counts?: NavCounts }) {
   const path = usePathname();
   const item = ({ href, label, icon: Icon }: NavItem) => {
     const active = isActive(path, href);
+    const n = counts?.[href] ?? 0;
     return (
       <Link
         key={href}
@@ -105,6 +111,12 @@ export function Rail({ footer }: { footer?: React.ReactNode }) {
       >
         <Icon className={cx("size-[19px] shrink-0", active ? "text-accent" : "")} weight={active ? "duotone" : "regular"} aria-hidden />
         <span className="truncate">{label}</span>
+        {n > 0 ? (
+          <span className="figures ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-accent-wash px-1.5 text-2xs font-semibold text-ink shadow-[inset_0_0_0_1px_var(--line-strong)]">
+            {n > 99 ? "99+" : n}
+            <span className="sr-only"> new</span>
+          </span>
+        ) : null}
         <NavPending />
       </Link>
     );
@@ -133,14 +145,16 @@ export function Rail({ footer }: { footer?: React.ReactNode }) {
 
 const TABS: { href: string; label: string; icon: LucideIcon; match: string[] }[] = [
   { href: "/", label: "Today", icon: Sun, match: ["/"] },
-  { href: "/orders", label: "Orders", icon: ClipboardList, match: ["/orders"] },
+  { href: "/orders", label: "Orders", icon: ClipboardList, match: ["/orders", "/inquiries"] },
   { href: "/ingredients", label: "Inventory", icon: Boxes, match: ["/ingredients", "/pantry"] },
   { href: "/income", label: "Money", icon: Wallet, match: ["/income", "/expenses", "/tax"] },
   { href: "/more", label: "More", icon: Ellipsis, match: ["/more", "/reports", "/price-list", "/recipes", "/designs", "/tasks", "/settings", "/guide", "/conversions"] },
 ];
 
-export function TabBar() {
+export function TabBar({ counts }: { counts?: NavCounts }) {
   const path = usePathname();
+  // New website inquiries live under Orders on a phone: a dot on that tab says so.
+  const inquiries = counts?.["/inquiries"] ?? 0;
   return (
     <nav
       aria-label="Main"
@@ -157,9 +171,11 @@ export function TabBar() {
           >
             <span className={cx("relative grid h-7 w-14 place-items-center rounded-full transition-colors duration-150", active ? "bg-surface text-accent" : "")}>
               <Icon className="size-[22px]" weight={active ? "duotone" : "regular"} aria-hidden />
+              {href === "/orders" && inquiries > 0 ? <span aria-hidden className="absolute top-0.5 right-3 size-2 rounded-full bg-accent ring-2 ring-shell" /> : null}
               <NavPending />
             </span>
             {label}
+            {href === "/orders" && inquiries > 0 ? <span className="sr-only">, {inquiries} new {inquiries === 1 ? "inquiry" : "inquiries"}</span> : null}
           </Link>
         );
       })}
@@ -198,6 +214,7 @@ export function MoreMenu() {
 const FAB: Record<string, { href: string; label: string }> = {
   "/": { href: "/orders/new", label: "Order" },
   "/orders": { href: "/orders/new", label: "Order" },
+  "/inquiries": { href: "/orders/new", label: "Order" },
   "/ingredients": { href: "/ingredients/new", label: "Add" },
   "/recipes": { href: "/recipes/new", label: "Recipe" },
   "/income": { href: "/income?add=1", label: "Income" },
