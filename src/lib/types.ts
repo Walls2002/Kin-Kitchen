@@ -125,7 +125,7 @@ export type OrderStatus = (typeof ORDER_STATUSES)[number];
 export const PAYMENT_METHODS = ["Cash", "GCash", "Maya", "Bank transfer", "Other"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
-export const SALES_CHANNELS = ["Facebook", "Instagram", "Walk-in", "Referral", "Market stall", "Office bulk", "Other"] as const;
+export const SALES_CHANNELS = ["Facebook", "Instagram", "Website", "Walk-in", "Referral", "Market stall", "Office bulk", "Other"] as const;
 
 export interface OrderItem {
   recipe_id: string | null;
@@ -170,6 +170,44 @@ export interface Order {
   notes: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/* ---------- website orders ---------- */
+
+export const WEB_ORDER_STATUSES = ["new", "converted", "dismissed"] as const;
+export type WebOrderStatus = (typeof WEB_ORDER_STATUSES)[number];
+export type WebOrderKind = "basket" | "custom-cake";
+
+/** One line of a website basket, as the customer picked it. */
+export interface WebOrderItem {
+  name: string;
+  category: string | null;
+  qty: number;
+  note: string | null;
+}
+
+/**
+ * A basket or custom-cake request sent from the public website through the
+ * submit_web_order RPC. It waits in the Orders inbox until the owner makes an
+ * order from it (converted, with order_id) or dismisses it.
+ */
+export interface WebOrder {
+  id: string;
+  created_at: string;
+  kind: WebOrderKind;
+  status: WebOrderStatus;
+  customer: string;
+  phone: string | null;
+  email: string | null;
+  /** How they'd like to hear back: "Viber", "Call", "Email"... as the website sends it. */
+  contact_pref: string | null;
+  pickup_point: string | null;
+  pickup_date: Day | null;
+  occasion: string | null;
+  notes: string | null;
+  items: WebOrderItem[];
+  /** The order made from it. */
+  order_id: string | null;
 }
 
 export interface IncomeEntry {

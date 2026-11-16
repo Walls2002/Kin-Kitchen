@@ -314,6 +314,16 @@ export const CHAPTERS: Chapter[] = [
         ],
       },
       {
+        title: "Answer an order from the website",
+        steps: [
+          "Baskets and custom-cake requests sent from your website wait at the top of **Orders** under **From the website**, newest first. Today counts them in the line under the heading.",
+          "Each one shows who sent it, their phone or email and how they'd like a reply, the pickup place and day, what they picked and their notes.",
+          "Tap **Make order**. The new order opens filled in: name, contact, **Came in through** Website, the pickup day as **Due**, and everything they sent in **Notes**. Items whose name matches your price list are already added; add the rest.",
+          "Tap **Add order**. The request leaves the inbox and stays linked to the order.",
+          "Not taking it? Tap **Dismiss**. The message has **Undo**.",
+        ],
+      },
+      {
         title: "Record a deposit or a payment",
         steps: [
           "Open the order. Under Payments, tap **+ Record payment**. It starts with the balance still owed, today's date and GCash.",

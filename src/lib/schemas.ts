@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DECOR_ITEMS, PIPING_TIPS, SKETCH_TEMPLATES } from "./types";
+import { DECOR_ITEMS, PIPING_TIPS, SKETCH_TEMPLATES, WEB_ORDER_STATUSES } from "./types";
 
 const positive = (label: string) =>
   z.number({ error: `Enter the ${label}` }).finite().positive(`${label[0].toUpperCase()}${label.slice(1)} must be more than 0`);
@@ -162,10 +162,17 @@ export const orderSchema = z
         method: z.enum(["Cash", "GCash", "Maya", "Bank transfer", "Other"]),
       }),
     ),
-    notes: optionalText(1000),
+    // Room for a website order's item list and the customer's own notes (up to 2,000).
+    notes: optionalText(4000),
   })
   .refine((o) => o.due_date >= o.order_date, { message: "The due date can't be before the order date", path: ["due_date"] });
 export type OrderInput = z.infer<typeof orderSchema>;
+
+/** The inbox moves for a website order; the order it became is linked by saveOrder. */
+export const webOrderStatusSchema = z.object({
+  id: z.string().min(1).max(64),
+  status: z.enum(WEB_ORDER_STATUSES),
+});
 
 export const incomeSchema = z.object({
   date: day("date"),

@@ -1,6 +1,6 @@
 import "server-only";
 import type { PostgrestError } from "@supabase/supabase-js";
-import type { Category, Ingredient, Mover, PriceEntry } from "../types";
+import type { Category, Ingredient, Mover, PriceEntry, WebOrder } from "../types";
 import { createSupabaseServerClient } from "../supabase/server";
 import { RepoError, STARTER_CATEGORIES, type Collection, type Repo } from "./repo";
 
@@ -65,6 +65,22 @@ const DUPLICATE: Record<string, string> = {
 };
 
 type Db = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+
+/** True when the error says the table isn't there yet (its migration hasn't been run). */
+const missingTable = (error: PostgrestError | null) => !!error && (error.code === "42P01" || error.code === "PGRST205");
+
+function webOrder(row: unknown): WebOrder {
+  const r = row as Record<string, unknown>;
+  delete r.user_id;
+  if (!Array.isArray(r.items)) r.items = [];
+  r.items = (r.items as Record<string, unknown>[]).map((i) => ({
+    name: String(i?.name ?? ""),
+    category: i?.category == null ? null : String(i.category),
+    qty: Number(i?.qty) || 1,
+    note: i?.note == null ? null : String(i.note),
+  }));
+  return r as unknown as WebOrder;
+}
 
 function table<T, I>(db: Db, name: string, order: { column: string; ascending: boolean }): Collection<T, I> {
   const norm = (row: unknown) => {
@@ -214,5 +230,23 @@ export async function createSupabaseRepo(): Promise<Repo> {
     tasks: table(db, "tasks", { column: "created_at", ascending: true }),
     views: table(db, "dashboard_views", { column: "created_at", ascending: true }),
     sketches: table(db, "sketches", { column: "updated_at", ascending: false }),
+
+    async listWebOrders() {
+      const { data, error } = await db.from("web_orders").select("*").order("created_at", { ascending: false });
+      if (missingTable(error)) {
+        console.warn("[kin-kitchen] web_orders is missing; run supabase/migrations/0010_web_orders.sql to receive website orders.");
+        return [];
+      }
+      fail(error);
+      return (data ?? []).map(webOrder);
+    },
+    async setWebOrderStatus(id, status, orderId) {
+      const patch: Record<string, unknown> = { status };
+      if (orderId !== undefined) patch.order_id = orderId;
+      const { data, error } = await db.from("web_orders").update(patch).eq("id", id).select("*").maybeSingle();
+      fail(error);
+      if (!data) throw new RepoError("That website order no longer exists");
+      return webOrder(data);
+    },
   };
 }

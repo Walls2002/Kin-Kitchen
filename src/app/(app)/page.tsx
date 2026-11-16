@@ -10,6 +10,7 @@ import { Canister } from "@/components/canister-client";
 import { ButtonLink, cx } from "@/components/ui";
 import { addDays, addMonths, bakeHrefFor, growth, lastDayOf, incomeStatement, orderTotals, productStats, taskState, taxYear, yearOf, ymOf } from "@/lib/biz";
 import { loadBusiness } from "@/lib/biz-data";
+import { getRepo } from "@/lib/data";
 import { formatCount, formatDayShort, formatDayWeek, formatMonth, formatPeso, formatPesoWhole, formatPesoWholeSigned, formatQty, relativeDay } from "@/lib/format";
 import { isLow, type Ingredient } from "@/lib/types";
 
@@ -31,8 +32,9 @@ function restock(i: Ingredient) {
 }
 
 export default async function TodayPage() {
-  const b = await loadBusiness();
+  const [b, web] = await Promise.all([loadBusiness(), getRepo().then((r) => r.listWebOrders())]);
   const now = b.now;
+  const newWeb = web.filter((w) => w.status === "new").length;
   const ym = ymOf(now);
   const dayOfMonth = Number(now.slice(8));
   const monthName = formatMonth(ym).split(" ")[0];
@@ -143,6 +145,7 @@ export default async function TodayPage() {
   const brief = [
     overdue ? `${plural(overdue, "order")} overdue` : null,
     `${plural(dueToday - overdue, "order")} due today`,
+    newWeb ? `${plural(newWeb, "website order")} to answer` : null,
     `${plural(tasksLeft, "task")} left`,
     low.length ? `${plural(low.length, "thing")} to buy` : null,
   ].filter(Boolean);

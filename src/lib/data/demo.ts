@@ -1,5 +1,5 @@
 import "server-only";
-import type { Category, Ingredient, Order, PriceEntry, Unit } from "../types";
+import type { Category, Ingredient, Order, PriceEntry, Unit, WebOrder } from "../types";
 import type { IngredientInput, PastPriceInput } from "../schemas";
 import { seedBusiness, type BusinessStore } from "./demo-business";
 import { computeMovers, RepoError, STARTER_CATEGORIES, type Collection, type OrderRecordInput, type Repo } from "./repo";
@@ -122,7 +122,7 @@ function seed(): Store {
 }
 
 /** Bump when the sample data changes so a running dev server re-seeds. */
-const SEED_VERSION = 17;
+const SEED_VERSION = 18;
 const g = globalThis as unknown as { __kinDemo?: Store };
 
 /**
@@ -131,7 +131,7 @@ const g = globalThis as unknown as { __kinDemo?: Store };
  */
 function heal(s: Store): Store {
   const b = s.biz as Partial<BusinessStore> & Record<string, unknown>;
-  for (const k of ["recipes", "orders", "income", "expenses", "balance", "taxPayments", "tasks", "views", "sketches"] as const) if (!Array.isArray(b[k])) b[k] = [];
+  for (const k of ["recipes", "orders", "income", "expenses", "balance", "taxPayments", "tasks", "views", "sketches", "webOrders"] as const) if (!Array.isArray(b[k])) b[k] = [];
   for (const r of s.biz.recipes) {
     r.lines ??= [];
     r.steps ??= [];
@@ -176,7 +176,7 @@ function logPrice(i: Ingredient) {
   });
 }
 
-type Key = Exclude<keyof BusinessStore, "nextOrderNumber">;
+type Key = Exclude<keyof BusinessStore, "nextOrderNumber" | "webOrders">;
 
 /**
  * An in-memory table. `stamp` fills ids and timestamps; `check` enforces the
@@ -347,4 +347,16 @@ export const demoRepo: Repo = {
   tasks: collection("tasks", "task"),
   views: collection("views", "view", { check: uniqueName("a view") }),
   sketches: collection("sketches", "sketch", { touch: true }),
+
+  async listWebOrders() {
+    return clone(store().biz.webOrders.slice().sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at)));
+  },
+  async setWebOrderStatus(id, status, orderId) {
+    const w = store().biz.webOrders.find((w) => w.id === id);
+    if (!w) throw new RepoError("That website order no longer exists");
+    const patch: Partial<WebOrder> = { status };
+    if (orderId !== undefined) patch.order_id = orderId;
+    Object.assign(w, patch);
+    return clone(w);
+  },
 };

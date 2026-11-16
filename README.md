@@ -16,12 +16,40 @@ Open http://localhost:3000. With no Supabase keys set, the app runs in **demo mo
 ## Connect Supabase
 
 1. Create a free project at supabase.com.
-2. In the SQL editor, run [supabase/migrations/0001_init.sql](supabase/migrations/0001_init.sql), then [supabase/migrations/0002_business.sql](supabase/migrations/0002_business.sql), then [0003_bake_and_designs.sql](supabase/migrations/0003_bake_and_designs.sql) (recipe steps and cake designs), [0004_profit_on_cost.sql](supabase/migrations/0004_profit_on_cost.sql), [0005_design_surface.sql](supabase/migrations/0005_design_surface.sql) and [0006_design_views.sql](supabase/migrations/0006_design_views.sql) (more cake shapes, several views per design). With the Supabase CLI linked to the project, `npx supabase db push` runs whichever are new. The first creates the pantry tables, the generated `cost_per_unit` columns, the `updated_at` and price-history triggers, row-level security, the `price_movers(days)` function and a `ping()` function for keep-alive. The second adds recipes, orders, income, expenses, balance sheet items, tax payments, tasks and saved dashboard views, each behind row-level security.
+2. In the SQL editor, run [supabase/migrations/0001_init.sql](supabase/migrations/0001_init.sql), then [supabase/migrations/0002_business.sql](supabase/migrations/0002_business.sql), then [0003_bake_and_designs.sql](supabase/migrations/0003_bake_and_designs.sql) (recipe steps and cake designs), [0004_profit_on_cost.sql](supabase/migrations/0004_profit_on_cost.sql), [0005_design_surface.sql](supabase/migrations/0005_design_surface.sql) and [0006_design_views.sql](supabase/migrations/0006_design_views.sql) (more cake shapes, several views per design), then the rest in number order up to [0010_web_orders.sql](supabase/migrations/0010_web_orders.sql) (website orders, below). With the Supabase CLI linked to the project, `npx supabase db push` runs whichever are new. The first creates the pantry tables, the generated `cost_per_unit` columns, the `updated_at` and price-history triggers, row-level security, the `price_movers(days)` function and a `ping()` function for keep-alive. The second adds recipes, orders, income, expenses, balance sheet items, tax payments, tasks and saved dashboard views, each behind row-level security.
 3. Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `NEXT_PUBLIC_SITE_URL`.
 4. In Supabase > Authentication > URL configuration, add `<your site>/auth/callback` to the redirect URLs (for magic links).
 5. Optional: to log in with a password, create the user in Supabase > Authentication > Users with a password.
 
 The first time you log in, the starter categories are created for you. Only the anon key is used; the service-role key is never needed.
+
+## Website orders
+
+The public website (a static site with no server) sends baskets and custom-cake requests straight into the CRM. They land in **From the website** at the top of Orders, where **Make order** opens the new-order form filled in from the request (customer, contact, channel Website, the pickup day as due date, the item list and notes; items whose names match the price list are added) and saving the order marks the request converted and links it. **Dismiss** sets it aside, with Undo.
+
+1. Run [supabase/migrations/0010_web_orders.sql](supabase/migrations/0010_web_orders.sql) in the SQL editor (or `npx supabase db push`). Until then the inbox is simply empty.
+2. Give the website your project URL and its publishable (anon) key. It posts to `${SUPABASE_URL}/rest/v1/rpc/submit_web_order` with the headers `apikey` and `Authorization: Bearer <anon key>` and this body:
+
+```json
+{
+  "payload": {
+    "kind": "basket",
+    "customer": "Carla Reyes",
+    "phone": "0917 123 4567",
+    "email": null,
+    "contact_pref": "Viber",
+    "pickup_point": "Marikina",
+    "pickup_date": "2026-12-24",
+    "occasion": "Birthday",
+    "notes": "After 4 pm please",
+    "items": [{ "name": "Fudge brownies", "category": "Bars", "qty": 2, "note": "no nuts" }]
+  }
+}
+```
+
+The function checks everything before saving and answers with the new request's id, or an HTTP 400 whose `message` says what to fix: `kind` is `basket` or `custom-cake`; `customer` is 1 to 120 characters; a phone or an email is required; `pickup_date` is optional, as `YYYY-MM-DD`; `items` is a list of at most 40, each with a `name` (1 to 120 characters) and a whole `qty` from 1 to 99, and a basket needs at least one. Text is trimmed and cut to 200 characters (notes to 2,000). The same phone or email can send at most 5 requests in 10 minutes. Requests are filed under the owner, the first user in Supabase Auth.
+
+`submit_web_order` is the only way in for the website. The `web_orders` table has no insert policy and the anon role has no rights on it, so the anon key can add a request through the function but can't read, change or list any of them; only the signed-in owner can (row-level security). The only other function the anon key can usefully call is `ping()` for the keep-alive.
 
 ## Deploy to Vercel
 
@@ -43,6 +71,7 @@ Import the repo in Vercel, add the three environment variables, and deploy. Set 
 | `src/app/(app)/ingredients/`, `pantry/` | Ingredient sheet, detail (price history, purchases), pantry insights |
 | `src/app/(app)/@modal/` | Add/edit as a modal when opened from inside the app |
 | `src/app/(app)/settings/page.tsx` | Categories, CSV export, account |
+| `src/components/orders/web-inbox.tsx`, `src/lib/web-orders.ts` | Website order inbox on Orders, and turning a request into a filled-in new order |
 | `src/lib/data/` | `Repo` interface with Supabase and demo implementations; `demo-business.ts` seeds the sample business |
 | `src/lib/biz.ts` | All business arithmetic: recipe cost, order totals, income ledger, statements, BIR 8%, product stats, custom views, task timing |
 | `src/lib/actions.ts` | Server actions, validated with the shared Zod schemas in `src/lib/schemas.ts` |

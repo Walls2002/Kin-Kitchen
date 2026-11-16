@@ -31,6 +31,7 @@ import type {
   Stroke,
   Task,
   TaxPayment,
+  WebOrder,
 } from "../types";
 
 /**
@@ -49,6 +50,7 @@ export interface BusinessStore {
   tasks: Task[];
   views: DashboardView[];
   sketches: Sketch[];
+  webOrders: WebOrder[];
   nextOrderNumber: number;
 }
 
@@ -628,10 +630,79 @@ export function seedBusiness(ingredients: Ingredient[], history: PriceEntry[], n
     };
   });
 
-  return { recipes, orders, income, expenses, balance, taxPayments, tasks, views, sketches, nextOrderNumber: number };
+  return { recipes, orders, income, expenses, balance, taxPayments, tasks, views, sketches, webOrders: seedWebOrders(day, now), nextOrderNumber: number };
 
 }
 
 function daysAgo(now: string, d: string) {
   return Math.round((new Date(`${now}T00:00:00Z`).getTime() - new Date(`${d}T00:00:00Z`).getTime()) / 86_400_000);
+}
+
+/**
+ * Sample website orders waiting in the Orders inbox: made-up customers with
+ * example.com emails and 0000 phone numbers, newest first.
+ */
+function seedWebOrders(day: string, now: number): WebOrder[] {
+  const ago = (minutes: number) => new Date(now - minutes * 60_000).toISOString();
+  return [
+    {
+      id: "web-00001",
+      created_at: ago(26),
+      kind: "basket",
+      status: "new",
+      customer: "Carla Reyes (sample)",
+      phone: "0917 000 0142",
+      email: null,
+      contact_pref: "Viber",
+      pickup_point: "Kin Kitchen, Marikina",
+      pickup_date: addDays(day, 3),
+      occasion: null,
+      notes: "Can I pick up after 4 pm?",
+      items: [
+        { name: "Banana chocolate chip loaf", category: "Loaves", qty: 2, note: null },
+        { name: "Fudge brownies", category: "Bars", qty: 1, note: "Box of 6, no nuts please" },
+        { name: "Coconut macaroons", category: "Cookies", qty: 1, note: null },
+      ],
+      order_id: null,
+    },
+    {
+      id: "web-00002",
+      created_at: ago(60 * 5 + 12),
+      kind: "custom-cake",
+      status: "new",
+      customer: "Jun Dela Cruz (sample)",
+      phone: null,
+      email: "jun.sample@example.com",
+      contact_pref: "Email",
+      pickup_point: "Meet-up at Cubao",
+      pickup_date: addDays(day, 9),
+      occasion: "Birthday",
+      notes: "Pastel blue, \"Happy 7th, Mia\" on top, small stars around the side. She loves unicorns.",
+      items: [
+        { name: "Bento/icing cake 6x2", category: "Cakes", qty: 1, note: "Chocolate base" },
+        { name: "Cupcakes box", category: "Cupcakes", qty: 1, note: "Match the cake colours" },
+      ],
+      order_id: null,
+    },
+    {
+      id: "web-00003",
+      created_at: ago(60 * 26),
+      kind: "basket",
+      status: "new",
+      customer: "Bea Santos (sample)",
+      phone: "0918 000 0377",
+      email: "bea.sample@example.com",
+      contact_pref: "Messenger",
+      pickup_point: null,
+      pickup_date: null,
+      occasion: "Office merienda",
+      notes: null,
+      items: [
+        { name: "Crinkles", category: "Cookies", qty: 3, note: null },
+        { name: "Banana cinnamon streusel loaf", category: "Loaves", qty: 1, note: null },
+        { name: "Full fondant cake", category: "Cakes", qty: 1, note: "Quote first, for next month" },
+      ],
+      order_id: null,
+    },
+  ];
 }

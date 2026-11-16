@@ -1,4 +1,4 @@
-import type { BalanceItem, Category, DashboardView, Sketch, Expense, IncomeEntry, Ingredient, Mover, Order, PriceEntry, Recipe, Task, TaxPayment } from "../types";
+import type { BalanceItem, Category, DashboardView, Sketch, Expense, IncomeEntry, Ingredient, Mover, Order, PriceEntry, Recipe, Task, TaxPayment, WebOrder, WebOrderStatus } from "../types";
 import type {
   BalanceInput,
   ExpenseInput,
@@ -63,6 +63,11 @@ export interface Repo {
   tasks: Collection<Task, TaskInput>;
   views: Collection<DashboardView, ViewInput>;
   sketches: Collection<Sketch, SketchInput>;
+
+  /** Website orders (the submit_web_order RPC writes them), newest first. Empty until migration 0010 is run. */
+  listWebOrders(): Promise<WebOrder[]>;
+  /** Moves a website order through the inbox; `orderId` links the order made from it (null unlinks). */
+  setWebOrderStatus(id: string, status: WebOrderStatus, orderId?: string | null): Promise<WebOrder>;
 }
 
 export const STARTER_CATEGORIES = [

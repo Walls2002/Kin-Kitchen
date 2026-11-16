@@ -9,6 +9,7 @@ import { addDays, orderTotals, recipeCost, sellName, sellOptions, varietyCost, v
 import { formatCount, formatDayWeek, formatPeso, formatPesoSigned, relativeDay } from "@/lib/format";
 import { orderSchema, type OrderInput } from "@/lib/schemas";
 import { ORDER_STATUSES, PAYMENT_METHODS, SALES_CHANNELS, type Ingredient, type Order, type OrderStatus, type PaymentMethod, type Recipe } from "@/lib/types";
+import type { OrderPrefill } from "@/lib/web-orders";
 import { MoneyLine, StatusPill, statusLabel } from "../biz-ui";
 import { Combobox } from "../recipes/combobox";
 import { PesoInput } from "../recipes/recipe-editor";
@@ -27,6 +28,8 @@ interface Props {
   now: string;
   /** Extra panels for the right column, like "From the pantry". */
   aside?: ReactNode;
+  /** A new order made from a website order (Make order in the website inbox). */
+  prefill?: OrderPrefill;
 }
 
 interface ItemState {
@@ -51,7 +54,7 @@ const show = (n: number) => (Number.isFinite(n) ? String(Math.round(n * 100) / 1
 const orZero = (n: number) => (Number.isFinite(n) ? n : 0);
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-export function OrderForm({ order, recipes, ingredients, customers, now, aside }: Props) {
+export function OrderForm({ order, recipes, ingredients, customers, now, aside, prefill }: Props) {
   const router = useRouter();
   const toast = useToast();
   const ids = useId();
@@ -72,14 +75,14 @@ export function OrderForm({ order, recipes, ingredients, customers, now, aside }
   const nextKey = () => `i${seq.current++}`;
 
   const [v, setV] = useState(() => ({
-    customer: order?.customer ?? "",
-    contact: order?.contact ?? "",
-    channel: order?.channel ?? "Facebook",
+    customer: order?.customer ?? prefill?.customer ?? "",
+    contact: order?.contact ?? prefill?.contact ?? "",
+    channel: order?.channel ?? prefill?.channel ?? "Facebook",
     order_date: order?.order_date ?? now,
-    due_date: order?.due_date ?? addDays(now, 1),
+    due_date: order?.due_date ?? prefill?.due_date ?? addDays(now, 1),
     delivery_fee: order ? show(order.delivery_fee) : "",
     discount: order ? show(order.discount) : "",
-    notes: order?.notes ?? "",
+    notes: order?.notes ?? prefill?.notes ?? "",
   }));
   const [status, setStatus] = useState<OrderStatus>(order?.status ?? "pending");
   // The status bar changes the saved order; keep the form's status field in step with it.
@@ -92,7 +95,7 @@ export function OrderForm({ order, recipes, ingredients, customers, now, aside }
     setBaseStatus(order.status);
   }
   const [items, setItems] = useState<ItemState[]>(() =>
-    (order?.items ?? []).map((i, n) => ({ key: `s${n}`, recipe_id: i.recipe_id, variety_id: i.variety_id ?? null, name: i.name, qty: show(i.qty), unit_price: show(i.unit_price), unit_cost: i.unit_cost })),
+    (order?.items ?? prefill?.items ?? []).map((i, n) => ({ key: `s${n}`, recipe_id: i.recipe_id, variety_id: i.variety_id ?? null, name: i.name, qty: show(i.qty), unit_price: show(i.unit_price), unit_cost: i.unit_cost })),
   );
   const [payments, setPayments] = useState<PayState[]>(() => (order?.payments ?? []).map((p) => ({ id: p.id, amount: show(p.amount), date: p.date, method: p.method })));
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -197,7 +200,7 @@ export function OrderForm({ order, recipes, ingredients, customers, now, aside }
       return;
     }
     start(async () => {
-      const res = await saveOrder(order?.id ?? null, result.data);
+      const res = await saveOrder(order?.id ?? null, result.data, order ? null : prefill?.webOrderId);
       if (!res.ok) {
         setErrors(res.fieldErrors ?? {});
         setFormError(res.error);
@@ -218,7 +221,8 @@ export function OrderForm({ order, recipes, ingredients, customers, now, aside }
         const d = await saveSketch(null, { ...design, title, order_id: c.order.id });
         designNote = d.ok ? " Cake design saved." : " The cake design didn't save; draw it again on the order.";
       }
-      toast({ message: (changed ? `${lead} ${m.message}` : lead) + designNote, tone: m.tone });
+      const webNote = c.fromWeb === true ? " Taken off the website list." : c.fromWeb === false ? " It's still on the website list; dismiss it there." : "";
+      toast({ message: (changed ? `${lead} ${m.message}` : lead) + designNote + webNote, tone: m.tone });
       if (!order) router.push(`/orders/${c.order.id}`);
     });
   };
@@ -278,6 +282,8 @@ export function OrderForm({ order, recipes, ingredients, customers, now, aside }
               <>
                 For <span className="font-medium text-ink">{order.customer}</span> · due {formatDayWeek(order.due_date)} ({relativeDay(order.due_date, now)})
               </>
+            ) : prefill ? (
+`From the website. ${prefillNote(prefill)}`
             ) : (
               "Who it's for, what they want and when. Payments you record here count as income."
             )}
@@ -302,7 +308,7 @@ export function OrderForm({ order, recipes, ingredients, customers, now, aside }
                       list={`${ids}-customers`}
                       value={v.customer}
                       autoComplete="off"
-                      autoFocus={!order}
+                      autoFocus={!order && !prefill}
                       placeholder="Who is it for?"
                       onChange={(e) => {
                         const known = knownCustomer(e.target.value);
@@ -483,7 +489,7 @@ export function OrderForm({ order, recipes, ingredients, customers, now, aside }
 
           <section className="surface p-4 sm:p-5">
             <Field label="Notes" optional error={errors.notes}>
-              {(p) => <Textarea {...p} value={v.notes} onChange={(e) => set({ notes: e.target.value })} rows={3} placeholder="Dedication, pickup time, allergies, delivery address" />}
+              {(p) => <Textarea {...p} value={v.notes} onChange={(e) => set({ notes: e.target.value })} rows={prefill ? 9 : 3} placeholder="Dedication, pickup time, allergies, delivery address" />}
             </Field>
           </section>
         </div>
@@ -639,6 +645,15 @@ export function OrderForm({ order, recipes, ingredients, customers, now, aside }
       ) : null}
     </form>
   );
+}
+
+/** How much of a website order the form could fill in by itself. */
+function prefillNote({ sent, items }: OrderPrefill) {
+  const n = items.length;
+  if (sent === 0) return "No items were picked; what they asked for is in Notes. Add the items, then the order.";
+  if (n === sent) return `${sent === 1 ? "The item matches" : `All ${sent} items match`} your price list. Check the prices and due date, then add the order.`;
+  if (n === 0) return `None of the ${sent} items match your price list by name. The full list is in Notes; add them from there.`;
+  return `${n} of ${sent} items match your price list. The full list is in Notes; add the rest from there.`;
 }
 
 /* ---------- one-tap status actions on the detail page ---------- */

@@ -17,8 +17,10 @@ import {
   taskSchema,
   taxPaymentSchema,
   viewSchema,
+  webOrderStatusSchema,
+  type OrderInput,
 } from "./schemas";
-import type { ActionResult, BalanceItem, DashboardView, Expense, IncomeEntry, Order, OrderItem, OrderStatus, Payment, Recipe, Sketch, StockMove, Task, TaxPayment } from "./types";
+import type { ActionResult, BalanceItem, DashboardView, Expense, IncomeEntry, Order, OrderItem, OrderStatus, Payment, Recipe, Sketch, StockMove, Task, TaxPayment, WebOrder, WebOrderStatus } from "./types";
 
 const refresh = () => revalidatePath("/", "layout");
 
@@ -158,6 +160,8 @@ export interface StatusChange {
   /** Ingredient names that didn't have enough stock to cover the order. */
   short: string[];
   moved: number;
+  /** A new order made from a website order: true once that request is marked converted, false if linking it failed. */
+  fromWeb?: boolean;
 }
 
 async function applyStatus(order: Order, status: OrderStatus): Promise<StatusChange> {
@@ -183,23 +187,40 @@ async function applyStatus(order: Order, status: OrderStatus): Promise<StatusCha
   return { order: saved, previous, short, moved: moves?.length ?? 0 };
 }
 
-export async function saveOrder(id: string | null, raw: unknown): Promise<ActionResult<StatusChange>> {
+/**
+ * Saves an order. `fromWebOrder` is the website order a new order was made from:
+ * once the order is saved, that request is marked converted and linked to it.
+ */
+export async function saveOrder(id: string | null, raw: unknown, fromWebOrder?: string | null): Promise<ActionResult<StatusChange>> {
   const p = parse(orderSchema, raw);
   if (!p.ok) return p.result;
   return run(async () => {
-    const { repo, unitCost } = await costs();
-    const existing = id ? await repo.orders.get(id) : null;
-    if (id && !existing) throw new RepoError("That order no longer exists");
-    const wasDone = existing?.status === "done";
-    // Costs follow the recipe until the order is finished; then they are fixed.
-    const items = wasDone ? p.data.items : p.data.items.map((i) => ({ ...i, unit_cost: unitCost(i) }));
-    const base = { ...p.data, items, status: existing?.status ?? "pending" };
-    const saved = existing
-      ? await repo.orders.update(existing.id, base)
-      : await repo.orders.create({ ...base, stock_moves: null, done_at: null });
-    if (p.data.status !== saved.status) return applyStatus(saved, p.data.status);
-    return { order: saved, previous: saved.status, short: [], moved: 0 };
+    const change = await writeOrder(id, p.data);
+    if (id || typeof fromWebOrder !== "string" || !fromWebOrder || fromWebOrder.length > 64) return change;
+    // The order is saved either way; a failed link only leaves the request in the inbox.
+    try {
+      await (await getRepo()).setWebOrderStatus(fromWebOrder, "converted", change.order.id);
+      return { ...change, fromWeb: true };
+    } catch (e) {
+      console.error(e);
+      return { ...change, fromWeb: false };
+    }
   });
+}
+
+async function writeOrder(id: string | null, data: OrderInput): Promise<StatusChange> {
+  const { repo, unitCost } = await costs();
+  const existing = id ? await repo.orders.get(id) : null;
+  if (id && !existing) throw new RepoError("That order no longer exists");
+  const wasDone = existing?.status === "done";
+  // Costs follow the recipe until the order is finished; then they are fixed.
+  const items = wasDone ? data.items : data.items.map((i) => ({ ...i, unit_cost: unitCost(i) }));
+  const base = { ...data, items, status: existing?.status ?? "pending" };
+  const saved = existing
+    ? await repo.orders.update(existing.id, base)
+    : await repo.orders.create({ ...base, stock_moves: null, done_at: null });
+  if (data.status !== saved.status) return applyStatus(saved, data.status);
+  return { order: saved, previous: saved.status, short: [], moved: 0 };
 }
 
 export async function setOrderStatus(id: string, status: OrderStatus): Promise<ActionResult<StatusChange>> {
@@ -252,6 +273,15 @@ export async function restoreOrder(row: Order): Promise<ActionResult<Order>> {
     }
     return repo.orders.restore(row);
   });
+}
+
+/* ---------- website orders ---------- */
+
+/** Dismisses a website order, or puts it back in the inbox (undo). */
+export async function markWebOrder(id: string, status: WebOrderStatus): Promise<ActionResult<WebOrder>> {
+  const p = parse(webOrderStatusSchema, { id, status });
+  if (!p.ok) return p.result;
+  return run(async () => (await getRepo()).setWebOrderStatus(p.data.id, p.data.status));
 }
 
 /* ---------- income and expenses ---------- */

@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { PageHeader, StatStrip, type Stat } from "@/components/biz-ui";
 import { OrdersList } from "@/components/orders/orders-list";
+import { WebInbox } from "@/components/orders/web-inbox";
 import { ButtonLink } from "@/components/ui";
 import { addDays, inRange, monthRange, orderTotals, ymOf } from "@/lib/biz";
 import { loadBusiness } from "@/lib/biz-data";
+import { getRepo } from "@/lib/data";
 import { formatPeso, formatPesoWhole } from "@/lib/format";
 import { SALES_CHANNELS } from "@/lib/types";
 
@@ -11,8 +13,9 @@ export const metadata: Metadata = { title: "Orders" };
 export const dynamic = "force-dynamic";
 
 export default async function OrdersPage() {
-  const b = await loadBusiness();
+  const [b, web] = await Promise.all([loadBusiness(), getRepo().then((r) => r.listWebOrders())]);
   const { orders, now } = b;
+  const newWeb = web.filter((w) => w.status === "new");
   const open = orders.filter((o) => o.status === "pending" || o.status === "baking");
   const weekEnd = addDays(now, 6);
   const dueWeek = open.filter((o) => o.due_date >= now && o.due_date <= weekEnd);
@@ -65,6 +68,7 @@ export default async function OrdersPage() {
         }
       />
       {orders.length ? <StatStrip stats={stats} className="mt-5" /> : null}
+      {newWeb.length ? <WebInbox orders={newWeb} now={now} nowMs={Date.now()} className="mt-5" /> : null}
       <OrdersList orders={orders} now={now} channels={channels} />
     </>
   );

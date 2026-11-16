@@ -50,6 +50,20 @@ export const relativeDays = (iso: string, now = Date.now()) => {
   return months === 1 ? "a month ago" : `${months} months ago`;
 };
 
+/** "just now", "25 min ago", "3 hours ago", "yesterday", "4 days ago": how long since a moment. */
+export const timeAgo = (iso: string, now = Date.now()) => {
+  const minutes = Math.floor((now - new Date(iso).getTime()) / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return hours === 1 ? "an hour ago" : `${hours} hours ago`;
+  return relativeDays(iso, now);
+};
+
+const manilaStamp = new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "Asia/Manila" });
+/** Nov 16, 3:20 PM in Manila, whatever the server's clock zone. */
+export const formatStamp = (iso: string) => manilaStamp.format(new Date(iso));
+
 /* ---------- calendar days ("2026-10-17") and months ("2026-10") ---------- */
 
 const utc = (d: string) => new Date(d.length === 7 ? `${d}-01T00:00:00Z` : `${d}T00:00:00Z`);
